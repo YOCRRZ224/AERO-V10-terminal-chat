@@ -1,0 +1,85 @@
+# terminal_chat_client.py
+import socket
+import threading
+import sys
+import time
+import subprocess
+import os
+
+HOST = '192.168.158.122'
+PORT = 12345
+MAX_FILE_SIZE = 7 * 1024 * 1024
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# ANSI color codes
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+RESET = '\033[0m'
+
+# ANSI animation codes
+FADE_IN = '\033[38;5;232m'
+FADE_OUT = '\033[38;5;238m'
+CLEAR_LINE = '\033[K'
+
+CONNECT_SOUND = 'connect.ogg'
+DISCONNECT_SOUND = 'disconnect.ogg'
+
+def play_sound(filename):
+    try:
+        subprocess.Popen(['play', '-q', filename], shell=False)
+    except FileNotFoundError:
+        print(f"{YELLOW}[SYSTEM] Sound file '{filename}' not found.{RESET}")
+    except Exception as e:
+        print(f"{YELLOW}[SYSTEM] Error playing sound: {e}{RESET}")
+
+def receive():
+    while True:
+        try:
+            message = client.recv(1024).decode('utf-8')
+            print(message, end='')
+            if message.startswith("[SYSTEM]") and "is sharing file:" in message:
+                parts = message.split()
+                filename = parts[4]
+                sender_nick = parts[1]
+                ip_port_str = parts[-1]
+                ip_port = ip_port_str.split(":")
+                if len(ip_port) == 2:
+                    sender_ip = ip_port[0]
+                    sender_p2p_port = int(ip_port[1])
+                    print(f"\n[SYSTEM] To download '{filename}' from {sender_nick}, type: /getfile {filename} {sender_nick} {sender_ip} {sender_p2p_port}")
+                    print(f"[DEBUG RECEIVE] parts of SYSTEM message: {parts}") # Debug print
+        except (ConnectionResetError, ConnectionAbortedError):
+            print(f"\n{YELLOW}[SYSTEM] Connection to the server lost.{RESET}")
+            play_sound(DISCONNECT_SOUND)
+            client.close()
+            sys.exit()
+        except Exception as e:
+            print(f"\n{YELLOW}[SYSTEM] Error receiving message: {e}{RESET}")
+            client.close()
+            sys.exit()
+
+def write():
+    while True:
+        try:
+            message = input()
+            if message.lower() == '/quit':
+                print(f"{YELLOW}[SYSTEM] Disconnecting...{RESET}")
+                play_sound(DISCONNECT_SOUND)
+                client.close()
+                sys.exit()
+            elif message.lower() == '/users':
+                client.send(message.encode('utf-8'))
+            elif message.startswith('/nick '):
+                client.send(message.encode('utf-8'))
+            elif message.startswith('/sendfile '):
+                parts = message.split()
+                if len(parts) == 2 and os.path.exists(parts[1]):
+                    filename = parts[1]
+                    while True:
+                        try:
+                            p2p_port_str = input(f"Enter a port for P2P sharing of '{filename}': ")
+                            p2p_port = int(p2p_port_str)
+                            if 1024 <= p2p_port <= 65535:
+                                client.send(f"/sendfile {filename} {p2p_port}".encode('utf-8'))
+                                threading.Thread(target=serve_file, args=(filename, p2p_por
