@@ -1,0 +1,174 @@
+import socket
+import threading
+import time
+import os
+
+HOST = '0.0.0.0'
+PORT = 12345
+FILE_STORAGE_PATH = 'server_files'
+MAX_FILE_SIZE = 7 * 1024 * 1024
+
+clients = []
+nicknames = {}
+addresses = {}
+
+# ANSI color codes
+GREEN = '\033[92m'
+YELLOW = '\033[93m'
+BLUE = '\033[94m'
+RESET = '\033[0m'
+
+# ANSI animation codes
+FADE_IN = '\033[38;5;232m'
+FADE_OUT = '\033[38;5;238m'
+CLEAR_LINE = '\033[K'
+
+def broadcast(message, sender_socket=None, system_message=False):
+    timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+    for client in clients:
+        try:
+            if system_message:
+                client.send(f"{YELLOW}[{timestamp}] [SYSTEM] {message}{RESET}\n".encode('utf-8'))
+            elif sender_socket in nicknames:
+                nickname = nicknames[sender_socket]
+                client.send(f"{GREEN}[{timestamp}] {nickname}:{RESET} {message}\n".encode('utf-8'))
+            else:
+                client.send(f"{YELLOW}[{timestamp}] Unknown: {message}\n".encode('utf-8'))
+        except:
+            remove_client(client)
+
+def send_typing_status(sender_socket, typing=True):
+    if sender_socket in nicknames:
+        nickname = nicknames[sender_socket]
+        for client in clients:
+            if client != sender_socket:
+                try:
+                    if typing:
+                        client.send(f"{YELLOW}{nickname} is typing...{RESET}\r".encode('utf-8'))
+                    else:
+                        client.send(f"{CLEAR_LINE}\r".encode('utf-8'))
+                except:
+                    remove_client(client)
+
+def handle_client(client, address):
+    try:
+        nickname = client.recv(1024).decode('utf-8').strip()
+        if not nickname:
+            remove_client(client)
+            return
+
+        nicknames[client] = nickname
+        addresses[client] = address[0]
+        clients.append(client)
+        broadcast(f"{FADE_IN}{nickname}{RESET} joined the chat.", client, system_message=True)
+        print(f"{BLUE}Connected: {nickname} ({address}){RESET}")
+        send_user_list()
+
+        while True:
+            message = client.recv(1024).decode('utf-8')
+            if not message:
+                break
+            print(f"[SERVER DEBUG] Received message: {message.strip()} from {nicknames.get(client)}")
+
+            if message.startswith('/nick '):
+                new_nickname = message[6:].strip()
+                if new_nickname and new_nickname not in nicknames.values():
+                    old_nickname = nicknames[client]
+                    nicknames[client] = new_nickname
+                    broadcast(f"{old_nickname} changed their nickname to {new_nickname}.", system_message=True)
+                    print(f"{BLUE}{old_nickname} changed nickname to {new_nickname} ({address}){RESET}")
+                    send_user_list()
+                    client.send(f"[SERVER] Your nickname is now {YELLOW}{new_nickname}{RESET}.\n".encode('utf-8'))
+                else:
+                    client.send("[SERVER] Invalid or already taken nickname.\n".encode('utf-8'))
+            elif message == "/users":
+                send_user_list(client)
+            elif message.startswith("/typing"):
+                send_typing_status(client, message.split()[1] == "true")
+            elif message.startswith("/sendfile "):
+                handle_file_transfer(client, message)
+            else:
+                broadcast(message, client)
+    except:
+        pass
+    finally:
+        remove_client(client)
+
+def handle_file_transfer(client, message):
+    """Handles the file transfer announcement from a client for P2P."""
+    try:
+        parts = message.split()
+        if len(parts) < 3 or not message.startswith("/sendfile"):
+            client.send("[SERVER] Usage: /sendfile <filename> <port>".encode('utf-8'))
+            return
+
+        filename = parts[1]
+        try:
+            p2p_port = int(parts[2])
+            if not (1024 <= p2p_port <= 65535):
+                client.send("[SERVER] Invalid port number. Use a port between 1024 and 65535.".encode('utf-8'))
+                return
+        except ValueError:
+            client.send("[SERVER] Invalid port number format.".encode('utf-8'))
+            return
+
+        sender_nickname = nicknames.get(client, "Unknown")
+        sender_address = addresses.get(client)
+
+        if sender_address:
+            announcement = f"[SYSTEM] {sender_nickname} is sharing file: {filename} on IP:{sender_address} Port:{p2p_port}"
+            broadcast(announcement, sender_socket=client, system_message=True)
+            client.send(f"[SERVER] Sharing info broadcasted for {filename}".encode('utf-8'))
+        else:
+            client.send("[SERVER] Could not retrieve your IP address for P2P.".encode('utf-8'))
+
+    except Exception as e:
+        print(f"[SERVER] Error handling file sharing announcement: {e}")
+        client.send(f"[SERVER] Error handling file sharing announcement: {e}\n".encode('utf-8'))
+
+def remove_client(client):
+    if client in clients:
+        nickname = nicknames.get(client)
+        if nickname:
+            broadcast(f"{FADE_OUT}{nickname}{RESET} left the chat.", system_message=True)
+            del nicknames[client]
+            if client in addresses:
+                del addresses[client]
+            print(f"{BLUE}Disconnected: {nickname} ({client.getpeername()}){RESET}")
+            send_user_list()
+        clients.remove(client)
+        try:
+            client.close()
+        except:
+            pass
+
+def send_user_list(requesting_client=None):
+    user_list = list(nicknames.values())
+    user_list_message = f"[SERVER] Current users: {', '.join(user_list)}\n"
+    if requesting_client:
+        try:
+            requesting_client.send(user_list_message.encode('utf-8'))
+        except:
+            remove_client(requesting_client)
+    else:
+        for client in clients:
+            try:
+                client.send(user_list_message.encode('utf-8'))
+            except:
+                remove_client(client)
+
+def receive():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((HOST, PORT))
+    server.listen()
+
+    print(f"{YELLOW}Server listening on {HOST}:{PORT}{RESET}")
+
+    while True:
+        client, address = server.accept()
+        thread = threading.Thread(target=handle_client, args=(client, address))
+        thread.daemon = True
+        thread.start()
+
+if __name__ == "__main__":
+    receive(
