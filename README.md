@@ -98,7 +98,10 @@ Follow these steps on **both** your **Server Device (e.g., Android TV)** and you
 
 Before starting, you need to tell your **client** where the server is located.
 
-* Open `Client.py` on your **Client Device** (e.g., Mobile Phone) with a text editor (`nano terminal_chat_client.py`).
+* Open `Client.py` on your **Client Device** (e.g., Mobile Phone) with a text editor
+```
+*   nano Client.py
+*   ```
 * Locate the `HOST` variable near the top:
     ```python
     HOST = '127.0.0.1' # <-- Change this to your servers  IP address
