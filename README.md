@@ -98,7 +98,7 @@ Follow these steps on **both** your **Server Device (e.g., Android TV)** and you
 
 Before starting, you need to tell your **client** where the server is located.
 
-* Open `terminal_chat_client.py` on your **Client Device** (e.g., Mobile Phone) with a text editor (`nano terminal_chat_client.py`).
+* Open `Client.py` on your **Client Device** (e.g., Mobile Phone) with a text editor (`nano terminal_chat_client.py`).
 * Locate the `HOST` variable near the top:
     ```python
     HOST = '127.0.0.1' # <-- Change this to your servers  IP address
@@ -115,7 +115,7 @@ On your **Server Device** (e.g., your server device u will use):
 * Navigate to your project directory.
 * Run the server:
     ```bash
-    server.py
+    Server.py
     ```
     The server will print a message indicating it's started (e.g., `[SERVER] Starting chat server on ws://0.0.0.0:12345`).
 
@@ -133,7 +133,7 @@ On your **Client Device** (e.g., Mobile Phone):
 * Navigate to your project directory.
 * Run the client:
     ```bash
-    client.py
+    Client.py
     ```
     The client will attempt to connect to the server and print a welcome message.
 
