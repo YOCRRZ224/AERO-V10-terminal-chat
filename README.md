@@ -215,4 +215,5 @@ If you have a suggestion that would make this better, please fork the repo and c
 5.  Open a Pull Request
 
 ---
-
+PLEASE DONT COPY PASTE MY CODE AS YOUR WORK THIS PROJECT MOST OF THE TIME OF MY LIFE (only 17days)
+"IF U ARE COPYING THIS ALSO TAG ME LET ME POPULAR" 
