@@ -1,174 +1,282 @@
-import socket
-import threading
-import time
+import asyncio
+import websockets
+import json
 import os
+import mimetypes
+import re # Import the regular expression module
 
-HOST = '0.0.0.0'
-PORT = 12345
-FILE_STORAGE_PATH = 'server_files'
-MAX_FILE_SIZE = 7 * 1024 * 1024
+class ChatServer:
+    def __init__(self, host='0.0.0.0', port=12345):
+        self.host = host
+        self.port = port
+        self.connected_clients = {} # {websocket: {"username": str, "ip": str}}
+        self.next_file_id = 1 # To track file transfers
 
-clients = []
-nicknames = {}
-addresses = {}
+        print(f"[SERVER] Starting chat server on ws://{self.host}:{self.port}")
 
-# ANSI color codes
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
+    async def register_client(self, websocket):
+        """Registers a new client and assigns a default username."""
+        ip_address = websocket.remote_address[0]
+        default_username = f"User@{ip_address.replace('.', '_')}"
+        self.connected_clients[websocket] = {"username": default_username, "ip": ip_address}
+        print(f"[SERVER] Client connected from {ip_address}. Assigned username: {default_username}")
 
-# ANSI animation codes
-FADE_IN = '\033[38;5;232m'
-FADE_OUT = '\033[38;5;238m'
-CLEAR_LINE = '\033[K'
+        # Notify the new client of their username and current users
+        await self.send_message(f"[SERVER] Welcome! Your username is {default_username}. Use /nick <new_name> to change it.", websocket)
+        await self.list_users(websocket)
 
-def broadcast(message, sender_socket=None, system_message=False):
-    timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    for client in clients:
+        # Announce to everyone
+        await self.broadcast(f"[SERVER] {default_username} has joined the chat.", self.connected_clients.keys())
+
+    async def unregister_client(self, websocket):
+        """Unregisters a client."""
+        if websocket in self.connected_clients:
+            username = self.connected_clients[websocket]["username"]
+            del self.connected_clients[websocket]
+            print(f"[SERVER] Client {username} disconnected.")
+            await self.broadcast(f"[SERVER] {username} has left the chat.", self.connected_clients.keys())
+
+    async def send_message(self, message, client_websocket):
+        """Sends a message to a specific client."""
         try:
-            if system_message:
-                client.send(f"{YELLOW}[{timestamp}] [SYSTEM] {message}{RESET}\n".encode('utf-8'))
-            elif sender_socket in nicknames:
-                nickname = nicknames[sender_socket]
-                client.send(f"{GREEN}[{timestamp}] {nickname}:{RESET} {message}\n".encode('utf-8'))
-            else:
-                client.send(f"{YELLOW}[{timestamp}] Unknown: {message}\n".encode('utf-8'))
-        except:
-            remove_client(client)
+            await client_websocket.send(message)
+        except websockets.exceptions.ConnectionClosedOK:
+            print(f"[SERVER] Could not send message to disconnected client.")
+        except Exception as e:
+            print(f"[SERVER ERROR] Failed to send message to client {self.connected_clients.get(client_websocket, {}).get('username', 'UNKNOWN')}: {e}")
 
-def send_typing_status(sender_socket, typing=True):
-    if sender_socket in nicknames:
-        nickname = nicknames[sender_socket]
-        for client in clients:
-            if client != sender_socket:
-                try:
-                    if typing:
-                        client.send(f"{YELLOW}{nickname} is typing...{RESET}\r".encode('utf-8'))
-                    else:
-                        client.send(f"{CLEAR_LINE}\r".encode('utf-8'))
-                except:
-                    remove_client(client)
 
-def handle_client(client, address):
-    try:
-        nickname = client.recv(1024).decode('utf-8').strip()
-        if not nickname:
-            remove_client(client)
+    async def broadcast(self, message, clients_to_send_to):
+        """Broadcasts a message to all specified clients."""
+        if not clients_to_send_to:
             return
 
-        nicknames[client] = nickname
-        addresses[client] = address[0]
-        clients.append(client)
-        broadcast(f"{FADE_IN}{nickname}{RESET} joined the chat.", client, system_message=True)
-        print(f"{BLUE}Connected: {nickname} ({address}){RESET}")
-        send_user_list()
-
-        while True:
-            message = client.recv(1024).decode('utf-8')
-            if not message:
-                break
-            print(f"[SERVER DEBUG] Received message: {message.strip()} from {nicknames.get(client)}")
-
-            if message.startswith('/nick '):
-                new_nickname = message[6:].strip()
-                if new_nickname and new_nickname not in nicknames.values():
-                    old_nickname = nicknames[client]
-                    nicknames[client] = new_nickname
-                    broadcast(f"{old_nickname} changed their nickname to {new_nickname}.", system_message=True)
-                    print(f"{BLUE}{old_nickname} changed nickname to {new_nickname} ({address}){RESET}")
-                    send_user_list()
-                    client.send(f"[SERVER] Your nickname is now {YELLOW}{new_nickname}{RESET}.\n".encode('utf-8'))
-                else:
-                    client.send("[SERVER] Invalid or already taken nickname.\n".encode('utf-8'))
-            elif message == "/users":
-                send_user_list(client)
-            elif message.startswith("/typing"):
-                send_typing_status(client, message.split()[1] == "true")
-            elif message.startswith("/sendfile "):
-                handle_file_transfer(client, message)
-            else:
-                broadcast(message, client)
-    except:
-        pass
-    finally:
-        remove_client(client)
-
-def handle_file_transfer(client, message):
-    """Handles the file transfer announcement from a client for P2P."""
-    try:
-        parts = message.split()
-        if len(parts) < 3 or not message.startswith("/sendfile"):
-            client.send("[SERVER] Usage: /sendfile <filename> <port>".encode('utf-8'))
-            return
-
-        filename = parts[1]
-        try:
-            p2p_port = int(parts[2])
-            if not (1024 <= p2p_port <= 65535):
-                client.send("[SERVER] Invalid port number. Use a port between 1024 and 65535.".encode('utf-8'))
-                return
-        except ValueError:
-            client.send("[SERVER] Invalid port number format.".encode('utf-8'))
-            return
-
-        sender_nickname = nicknames.get(client, "Unknown")
-        sender_address = addresses.get(client)
-
-        if sender_address:
-            announcement = f"[SYSTEM] {sender_nickname} is sharing file: {filename} on IP:{sender_address} Port:{p2p_port}"
-            broadcast(announcement, sender_socket=client, system_message=True)
-            client.send(f"[SERVER] Sharing info broadcasted for {filename}".encode('utf-8'))
-        else:
-            client.send("[SERVER] Could not retrieve your IP address for P2P.".encode('utf-8'))
-
-    except Exception as e:
-        print(f"[SERVER] Error handling file sharing announcement: {e}")
-        client.send(f"[SERVER] Error handling file sharing announcement: {e}\n".encode('utf-8'))
-
-def remove_client(client):
-    if client in clients:
-        nickname = nicknames.get(client)
-        if nickname:
-            broadcast(f"{FADE_OUT}{nickname}{RESET} left the chat.", system_message=True)
-            del nicknames[client]
-            if client in addresses:
-                del addresses[client]
-            print(f"{BLUE}Disconnected: {nickname} ({client.getpeername()}){RESET}")
-            send_user_list()
-        clients.remove(client)
-        try:
-            client.close()
-        except:
-            pass
-
-def send_user_list(requesting_client=None):
-    user_list = list(nicknames.values())
-    user_list_message = f"[SERVER] Current users: {', '.join(user_list)}\n"
-    if requesting_client:
-        try:
-            requesting_client.send(user_list_message.encode('utf-8'))
-        except:
-            remove_client(requesting_client)
-    else:
-        for client in clients:
+        disconnected_clients = []
+        for client_websocket in clients_to_send_to:
             try:
-                client.send(user_list_message.encode('utf-8'))
-            except:
-                remove_client(client)
+                await client_websocket.send(message)
+            except websockets.exceptions.ConnectionClosed:
+                disconnected_clients.append(client_websocket)
+            except Exception as e:
+                print(f"[SERVER ERROR] Could not broadcast to client {self.connected_clients.get(client_websocket, {}).get('username', 'UNKNOWN')}: {e}")
 
-def receive():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((HOST, PORT))
-    server.listen()
+        for client_websocket in disconnected_clients:
+            await self.unregister_client(client_websocket)
 
-    print(f"{YELLOW}Server listening on {HOST}:{PORT}{RESET}")
+    async def list_users(self, websocket):
+        """Sends a list of connected users to a specific client."""
+        user_list = [client_info["username"] for client_info in self.connected_clients.values()]
+        user_list_str = ", ".join(user_list)
+        await self.send_message(f"[SERVER] Connected users: {user_list_str}", websocket)
 
-    while True:
-        client, address = server.accept()
-        thread = threading.Thread(target=handle_client, args=(client, address))
-        thread.daemon = True
-        thread.start()
+    async def handle_message(self, websocket, path):
+        """Handles incoming messages from clients."""
+        await self.register_client(websocket)
+        try:
+            async for message in websocket:
+                username = self.connected_clients[websocket]["username"]
+                print(f"[SERVER] Received from {username}: {message}")
+
+                if message.startswith("/"):
+                    parts = message.split(' ', 1)
+                    command = parts[0]
+                    arg = parts[1] if len(parts) > 1 else ""
+
+                    if command == "/nick":
+                        new_username = arg.strip()
+                        if new_username and new_username not in [u["username"] for u in self.connected_clients.values()]:
+                            old_username = self.connected_clients[websocket]["username"]
+                            self.connected_clients[websocket]["username"] = new_username
+                            await self.broadcast(f"[SERVER] {old_username} is now {new_username}.", self.connected_clients.keys())
+                            print(f"[SERVER] {old_username} changed name to {new_username}")
+                        else:
+                            await self.send_message("[SERVER] Invalid or taken username. Usage: /nick <new_username>", websocket)
+
+                    elif command == "/list":
+                        await self.list_users(websocket)
+
+                    elif command == "/help":
+                        help_message = (
+                            "[SERVER] Available commands:\n"
+                            "  /nick <new_name> - Change your username\n"
+                            "  /list - List all connected users\n"
+                            "  /file <recipient_username> <file_name> - Initiate file transfer\n"
+                            "  /help - Display this help message"
+                        )
+                        await self.send_message(help_message, websocket)
+
+                    elif command == "/file":
+                        # Expected format: /file <recipient_username> <file_name_with_extension>
+                        file_parts = arg.split(' ', 1)
+                        if len(file_parts) == 2:
+                            recipient_username = file_parts[0]
+                            file_name_with_extension = file_parts[1]
+                            await self.initiate_file_transfer(websocket, username, recipient_username, file_name_with_extension)
+                        else:
+                            await self.send_message("[SERVER] Usage: /file <recipient_username> <file_name_with_extension>", websocket)
+
+                    else:
+                        await self.send_message(f"[SERVER] Unknown command: {command}", websocket)
+
+                elif message.startswith("FILE_TRANSFER_REQUEST_ACCEPTED:"):
+                    # Format: FILE_TRANSFER_REQUEST_ACCEPTED:<file_id>
+                    try:
+                        file_id = int(message.split(':')[1])
+                        await self.handle_file_request_accepted(websocket, file_id)
+                    except ValueError:
+                        await self.send_message("[SERVER] Invalid file transfer acceptance format.", websocket)
+
+                elif message.startswith("FILE_CHUNK:"):
+                    # Format: FILE_CHUNK:<file_id>:<chunk_index>:<base64_data>
+                    try:
+                        parts = message.split(':', 3) # Split into 4 parts
+                        if len(parts) == 4:
+                            file_id = int(parts[1])
+                            chunk_index = int(parts[2])
+                            base64_data = parts[3]
+                            await self.handle_file_chunk(websocket, file_id, chunk_index, base64_data)
+                        else:
+                            await self.send_message("[SERVER] Invalid file chunk format.", websocket)
+                    except ValueError:
+                        await self.send_message("[SERVER] Invalid file chunk data.", websocket)
+
+                else:
+                    # --- Regular chat message handling with NEW TAGGING LOGIC ---
+                    formatted_message = f"[{username}] {message}"
+                    await self.broadcast(formatted_message, self.connected_clients.keys()) # Broadcast original message to all
+
+                    # Detect tags (@username)
+                    # Find all words starting with '@'
+                    # r'@(\w+)' captures the word characters after '@'
+                    tagged_usernames = re.findall(r'@(\w+)', message)
+
+                    if tagged_usernames:
+                        connected_usernames = {info["username"] for info in self.connected_clients.values()}
+                        
+                        # Use a set to avoid processing/notifying the same user multiple times if they are tagged multiple times
+                        for tagged_name in set(tagged_usernames):
+                            # Only notify if the tagged user is currently connected AND is not the sender
+                            if tagged_name in connected_usernames and tagged_name != username:
+                                for ws, info in self.connected_clients.items():
+                                    if info["username"] == tagged_name:
+                                        # Send private notification to the tagged user
+                                        snippet = message[:50] + ('...' if len(message) > 50 else '') # Take a snippet of the message
+                                        notification_msg = f"[SERVER] You were tagged by {username} in the chat: \"{snippet}\""
+                                        await self.send_message(notification_msg, ws)
+                                        print(f"[SERVER] Notified {tagged_name} about a tag from {username}.")
+                                        break # Found the websocket for this tagged_name, move to the next unique tagged_name
+                    # --- END OF NEW TAGGING LOGIC ---
+
+        except websockets.exceptions.ConnectionClosed:
+            print(f"[SERVER] Client connection closed during message handling.")
+        except Exception as e:
+            print(f"[SERVER ERROR] Unhandled exception in handle_message: {e}")
+        finally:
+            await self.unregister_client(websocket)
+
+    # --- File Transfer Logic (already implemented from previous iterations) ---
+    async def initiate_file_transfer(self, sender_websocket, sender_username, recipient_username, file_name):
+        recipient_websocket = None
+        for ws, info in self.connected_clients.items():
+            if info["username"] == recipient_username:
+                recipient_websocket = ws
+                break
+
+        if not recipient_websocket:
+            await self.send_message(f"[SERVER] User '{recipient_username}' not found.", sender_websocket)
+            return
+
+        file_id = self.next_file_id
+        self.next_file_id += 1
+        file_info = {
+            "id": file_id,
+            "sender_ws": sender_websocket,
+            "sender_username": sender_username,
+            "recipient_ws": recipient_websocket,
+            "recipient_username": recipient_username,
+            "file_name": file_name,
+            "chunks": [], # To store incoming chunks for the recipient
+            "expected_chunks": -1 # Will be set by the sender
+        }
+        # Store file_info temporarily. A more robust solution would manage these.
+        # For simplicity, let's store it directly on the websocket object if possible,
+        # or in a dedicated dict, e.g., self.active_file_transfers
+        if not hasattr(self, 'active_file_transfers'):
+            self.active_file_transfers = {}
+        self.active_file_transfers[file_id] = file_info
+
+        # Notify recipient about incoming file
+        await self.send_message(
+            f"FILE_TRANSFER_REQUEST:{file_id}:{sender_username}:{file_name}",
+            recipient_websocket
+        )
+        await self.send_message(f"[SERVER] Requested file '{file_name}' transfer to {recipient_username}. Waiting for acceptance...", sender_websocket)
+
+    async def handle_file_request_accepted(self, recipient_websocket, file_id):
+        if file_id not in self.active_file_transfers:
+            await self.send_message(f"[SERVER] Invalid file ID {file_id} for acceptance.", recipient_websocket)
+            return
+
+        file_info = self.active_file_transfers[file_id]
+        if file_info["recipient_ws"] != recipient_websocket:
+            await self.send_message(f"[SERVER] You are not the intended recipient for file ID {file_id}.", recipient_websocket)
+            return
+
+        # Notify sender to start sending chunks
+        await self.send_message(f"FILE_TRANSFER_READY:{file_id}", file_info["sender_ws"])
+        await self.send_message(f"[SERVER] {file_info['recipient_username']} accepted transfer for '{file_info['file_name']}'. Starting...", recipient_websocket)
+
+    async def handle_file_chunk(self, sender_websocket, file_id, chunk_index, base64_data):
+        if file_id not in self.active_file_transfers:
+            await self.send_message(f"[SERVER] Invalid file ID {file_id} for chunk.", sender_websocket)
+            return
+
+        file_info = self.active_file_transfers[file_id]
+        if file_info["sender_ws"] != sender_websocket:
+            await self.send_message(f"[SERVER] You are not the sender for file ID {file_id}.", sender_websocket)
+            return
+
+        # If this is the first chunk, the sender might also send expected_chunks count
+        if chunk_index == 0 and "EXPECTED_CHUNKS:" in base64_data:
+            try:
+                # Format: EXPECTED_CHUNKS:<total_chunks>:actual_base64_data
+                header_parts = base64_data.split(':', 1)
+                file_info["expected_chunks"] = int(header_parts[0].split(':')[1])
+                base64_data = header_parts[1] # Actual data starts after header
+            except ValueError:
+                await self.send_message("[SERVER] Invalid EXPECTED_CHUNKS header format.", sender_websocket)
+                return
+
+        # Append chunk data (ensure it's not a duplicate if dealing with retransmissions)
+        # For simplicity, we just append here. Real systems use sequence numbers and re-assembly.
+        if len(file_info["chunks"]) <= chunk_index:
+            file_info["chunks"].extend([None] * (chunk_index + 1 - len(file_info["chunks"])))
+        file_info["chunks"][chunk_index] = base64_data
+
+        # Forward chunk to recipient immediately (simpler than buffering on server)
+        # Recipient will reconstruct the file.
+        await self.send_message(
+            f"FILE_CHUNK_FORWARD:{file_info['id']}:{chunk_index}:{file_info['file_name']}:{base64_data}",
+            file_info["recipient_ws"]
+        )
+
+        # Notify sender to send next chunk
+        await self.send_message(f"FILE_CHUNK_RECEIVED:{file_id}:{chunk_index}", sender_websocket)
+
+        # Check if all chunks received (server-side confirmation)
+        if file_info["expected_chunks"] != -1 and all(c is not None for c in file_info["chunks"]) and len(file_info["chunks"]) == file_info["expected_chunks"]:
+            print(f"[SERVER] File ID {file_id} '{file_info['file_name']}' from {file_info['sender_username']} fully forwarded to {file_info['recipient_username']}.")
+            await self.send_message(f"FILE_TRANSFER_COMPLETE:{file_id}", file_info["sender_ws"]) # Notify sender
+            await self.send_message(f"FILE_TRANSFER_COMPLETE:{file_id}", file_info["recipient_ws"]) # Notify recipient
+
+            # Clean up active transfer info (important for memory)
+            del self.active_file_transfers[file_id]
+
+
+async def main():
+    server = ChatServer()
+    async with websockets.serve(server.handle_message, server.host, server.port):
+        await asyncio.Future() # Run forever
 
 if __name__ == "__main__":
-    receive(
+    asyncio.run(main())
