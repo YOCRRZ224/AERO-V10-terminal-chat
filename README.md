@@ -2,6 +2,10 @@
 
 ![Project Status](https://img.shields.io/badge/Status-Under%20Development-blue?style=for-the-badge&logo=github)
 
+![Repo Views](https://hits.seeyou.space/v2/stats.json?url=https%3A%2F%2Fgithub.com%2FYOCRRZ224%2FTerminal-chat-with-file-sharing-under-development-&type=badge)
+
+![Top Language](https://img.shields.io/github/languages/top/YOCRRZ224/Terminal-chat-with-file-sharing-under-development-?style=for-the-badge&logo=python)
+
 ---
 
 ## 🚀 Overview
