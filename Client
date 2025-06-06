@@ -1,386 +1,520 @@
-import asyncio
-import websockets
-import json
+import socket
+import threading
 import os
-import base64
 import sys
-import mimetypes
+import time
+import json 
 
-# --- Configuration -
-HOST = '127.0.0.1' # <-- Change this to your server  IP address
-PORT = 12345
-URI = f"ws://{HOST}:{PORT}"
+# --- Configuration ---
+HOST = '127.0.0.1' # Must match the server's HOST if it's set to '0.0.0.0', use the server's actual IP
+PORT = 55555
+BUFFER_SIZE = 1024 # Buffer size for sending/receiving network data
 
-# --- File Transfer Configuration ---
-DOWNLOAD_DIR = "downloads" # Directory to save received files
-CHUNK_SIZE = 16 * 1024 # 16 KB chunks, adjust as needed
+# --- Global Client Variables ---
+client_socket = None 
+nickname = None
+user_color = "\033[0m" # Default reset color. Will be loaded from server.
 
-# --- ANSI Escape Codes for Console Colors (Termux compatible) ---
-BOLD = '\033[1m'
-YELLOW = '\033[93m' # A good color for highlighting
-RESET = '\033[0m' # Resets all formatting
+# --- File Transfer State (Client-side) ---
+is_receiving_file = False          
+current_incoming_file_path = None  
+bytes_received_for_file = 0        
+expected_file_size = 0             
+incoming_file_writer = None        
+incoming_file_sender_nick = None   
 
-class ChatClient:
-    def __init__(self, uri):
-        self.uri = uri
-        self.websocket = None
-        self.username = "Connecting..." # This will be set by the server's welcome message
-        self.is_connected = False
-        self.file_transfer_data = {} # {file_id: {"name": str, "chunks": [], "total_chunks": int, "current_index": int, "save_path": str}}
+# New: Threading Event for file transfer confirmation
+file_transfer_ready_event = threading.Event()
+expected_confirmation_filename = None # To store filename from server confirmation
 
-    async def connect(self):
-        """Establishes connection to the WebSocket server."""
-        while True:
-            try:
-                self.websocket = await websockets.connect(self.uri)
-                self.is_connected = True
-                print(f"[CLIENT] Connected to {self.uri}")
-                break
-            except (websockets.exceptions.ConnectionClosedOK, ConnectionRefusedError):
-                print("[CLIENT] Connection refused or closed. Retrying in 3 seconds...")
-                self.is_connected = False
-                await asyncio.sleep(3)
-            except Exception as e:
-                print(f"[CLIENT] An error occurred during connection: {e}. Retrying in 3 seconds...")
-                self.is_connected = False
-                await asyncio.sleep(3)
+# --- To-Do List State (Client-side) ---
+# This is now just a local copy of what the server manages for display purposes
+todo_list_local_copy = [] 
 
-    async def send_message(self, message):
-        """Sends a message over the WebSocket."""
-        if self.is_connected:
-            try:
-                await self.websocket.send(message)
-            except websockets.exceptions.ConnectionClosed:
-                print("[CLIENT] Connection lost. Attempting to reconnect...")
-                self.is_connected = False
-                await self.connect()
-            except Exception as e:
-                print(f"[CLIENT ERROR] Failed to send message: {e}")
-        else:
-            print("[CLIENT] Not connected to server.")
+# --- ASCII Art Fonts (Example - for /big command) ---
+ascii_fonts = {
+    "standard": {
+        "A": ["  /\\  ", " /  \\ ", "/____\\", "/    \\", "/    \\"], "B": ["##### ", "#    #", "##### ", "#    #", "##### "],
+        "C": [" #####", "#     ", "#     ", "#     ", " #####"], "D": ["####  ", "#   # ", "#    #", "#   # ", "####  "],
+        "E": ["######", "#     ", "##### ", "#     ", "######"], "F": ["######", "#     ", "##### ", "#     ", "##### "],
+        "G": [" #####", "#     ", "# ### ", "#   # ", " #####"], "H": ["#    #", "#    #", "######", "#    #", "#    #"],
+        "I": ["######", "  #   ", "  #   ", "  #   ", "######"], "J": ["     #", "     #", "     #", "#    #", " #### "],
+        "K": ["#   # ", "#  #  ", "##    ", "#  #  ", "#   # "], "L": ["#     ", "#     ", "#     ", "#     ", "######"],
+        "M": ["# # #", "## ##", "# # #", " # # ", " # #"], "N": ["#   #", "##  #", "# # #", "#  ##", "#   #"],
+        "O": [" #### ", "#    #", "#    #", "#    #", " #### "], "P": ["##### ", "#    #", "##### ", "#     ", "#     "],
+        "Q": [" #### ", "#    #", "# #  #", "#  # #", " ####Q"], "R": ["##### ", "#    #", "##### ", "#  #  ", "#   # "],
+        "S": [" #####", "#     ", " #####", "      #", " #####"], "T": ["######", "  #   ", "  #   ", "  #   ", "  #   "],
+        "U": ["#    #", "#    #", "#    #", "#    #", " #### "], "V": ["#    #", "#    #", "#    #", " #  # ", "  ##  "],
+        "W": ["#    #", "#    #", "# ## #", "##  ##", "#    #"], "X": ["#    #", " #  # ", "  ##  ", " #  # ", "#    #"],
+        "Y": ["#    #", " #  # ", "  ##  ", "  #   ", "  #   "], "Z": ["######", "    # ", "   #  ", "  #   ", "######"],
+        "0": [" #### ", "#    #", "# ## #", "#    #", " #### "], "1": ["  #   ", " ##   ", "  #   ", "  #   ", "##### "],
+        "2": [" #### ", "#    #", "   ## ", "  #   ", "######"], "3": [" #####", "      #", " #### ", "      #", " #####"],
+        "4": ["#    #", "#    #", "######", "     #", "     #"], "5": ["######", "#     ", "##### ", "     #", " #####"],
+        "6": [" #####", "#    #", "######", "#    #", " #####"], "7": ["######", "     #", "    # ", "   #  ", "  #   "],
+        "8": [" #####", "#     #", " #####", "#     #", " #####"], "9": [" #####", "#    #", " #####", "     #", " #####"],
+        "!": ["  #   ", "  #   ", "  #   ", "      ", "  #   "], "?": [" #####", "#     #", "   ###", "      ", "   #  "],
+        ".": ["   .  "], " ": ["      ", "      ", "      ", "      ", "      "] # Space character definition
+    },
+}
 
-    async def receive_messages(self):
-        """Receives and processes messages from the server."""
-        while True:
-            if not self.is_connected:
-                await self.connect()
-                continue
-            try:
-                message = await self.websocket.recv()
-                self.process_incoming_message(message)
-            except websockets.exceptions.ConnectionClosed:
-                print("[CLIENT] Server disconnected. Attempting to reconnect...")
-                self.is_connected = False
-                await self.connect()
-            except Exception as e:
-                print(f"[CLIENT ERROR] Unhandled exception during message reception: {e}")
-                self.is_connected = False # Assume connection issue
-                await self.connect() # Attempt to reconnect
+# --- ANSI Color Codes (for highlighting and consistent client output) ---
+COLOR_RESET = "\033[0m"
+CLIENT_INFO_COLOR = "\033[33m"      # Yellow for client-side info/prompts
+CLIENT_ERROR_COLOR = "\033[31m"     # Red for client-side errors
+MENTION_HIGHLIGHT_BG = "\033[42m"   # Green background for mentions
+ASCII_ART_COLOR = "\033[34m"       # Blue for ASCII art
+TODO_DISPLAY_COLOR = "\033[95m"    # Bright Magenta for To-Do list local display
 
-    def process_incoming_message(self, message):
-        """Processes different types of incoming messages from the server."""
-        if message.startswith("[SERVER] Welcome! Your username is"):
-            # Extract and store initial username
-            self.username = message.split(' ')[-1].strip('.')
-            print(f"{message}")
-        elif message.startswith("[SERVER]"):
-            print(f"{message}")
-        elif message.startswith("FILE_TRANSFER_REQUEST:"):
-            # Format: FILE_TRANSFER_REQUEST:<file_id>:<sender_username>:<file_name>
-            parts = message.split(':', 3)
-            if len(parts) == 4:
-                file_id = int(parts[1])
-                sender_username = parts[2]
-                file_name = parts[3]
-                print(f"\n[FILE TRANSFER] {sender_username} wants to send '{file_name}'. (ID: {file_id})")
-                print("Type '/accept <file_id>' to accept or '/reject <file_id>' to decline.")
-                self.file_transfer_data[file_id] = {
-                    "name": file_name,
-                    "sender": sender_username,
-                    "chunks": [],
-                    "total_chunks": -1,
-                    "current_index": 0,
-                    "save_path": os.path.join(DOWNLOAD_DIR, file_name)
-                }
-            else:
-                print("[CLIENT ERROR] Invalid file transfer request format.")
-        elif message.startswith("FILE_TRANSFER_READY:"):
-            # Format: FILE_TRANSFER_READY:<file_id>
-            try:
-                file_id = int(message.split(':')[1])
-                # Check if this client is the sender for this file_id (based on the placeholder logic)
-                # We need to find the file info that has a placeholder ID (-1) and matches the expected recipient
-                found_file_info_key = None
-                for temp_id, info in self.file_transfer_data.items():
-                    if temp_id == -1 and info.get("recipient") == self.username: # Assuming recipient is stored on client side
-                        found_file_info_key = temp_id
-                        break
+
+# --- Helper Function: Send Message (Plain Text) ---
+def send_message(sock, message_str):
+    """Sends a plain string message as bytes over the socket."""
+    try:
+        sock.send(message_str.encode('utf-8'))
+    except Exception as e:
+        print(f"{CLIENT_ERROR_COLOR}Error sending message: {e}{COLOR_RESET}")
+        # Consider more robust error handling or exiting if client can't send
+
+# --- Helper Function: Display Progress Bar ---
+def print_progress_bar(prefix, current, total, bar_length=40):
+    """Prints a dynamic CLI progress bar."""
+    progress = (current / total) * 100
+    filled_length = int(bar_length * progress / 100)
+    bar = '#' * filled_length + '-' * (bar_length - filled_length)
+    sys.stdout.write(f"\r{CLIENT_INFO_COLOR}{prefix}: [{bar}] {progress:.1f}% ({current}/{total} bytes){COLOR_RESET}")
+    sys.stdout.flush()
+
+# --- To-Do List Functions (Client-Side Display Only - Server Manages Data) ---
+# These functions now only format and print the 'todo_list_local_copy' received from the server.
+# They no longer interact with a local file.
+def list_todos_client(filter_type='all'):
+    """Lists tasks based on filter_type (all, pending, completed) from local copy."""
+    if not todo_list_local_copy:
+        print(f"{TODO_DISPLAY_COLOR}[TO-DO]: Your to-do list is empty.{COLOR_RESET}")
+        return
+
+    print(f"{TODO_DISPLAY_COLOR}--- Your To-Do List ({filter_type.capitalize()}) ---{COLOR_RESET}")
+    found_tasks = False
+    for todo in todo_list_local_copy:
+        status = "✅" if todo['completed'] else "❌"
+        if (filter_type == 'all' or
+            (filter_type == 'pending' and not todo['completed']) or
+            (filter_type == 'completed' and todo['completed'])):
+            print(f"{TODO_DISPLAY_COLOR}[{todo['id']}] {status} {todo['task']}{COLOR_RESET}")
+            found_tasks = True
+    if not found_tasks:
+        print(f"{TODO_DISPLAY_COLOR}No {filter_type} tasks found.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}---------------------------{COLOR_RESET}")
+
+def todo_help_client():
+    """Displays help for to-do commands."""
+    print(f"{TODO_DISPLAY_COLOR}--- To-Do List Commands ---{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}/todo add <task_description> - Add a new task.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}/todo list [all|pending|completed] - List tasks. Default is 'all'.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}/todo complete <task_id> - Mark a task as complete.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}/todo remove <task_id> - Remove a task.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}/todo help - Show this help message.{COLOR_RESET}")
+    print(f"{TODO_DISPLAY_COLOR}---------------------------{COLOR_RESET}")
+
+# --- Function to Receive Messages from Server ---
+def receive():
+    """Handles all incoming data from the server, including chat and file data."""
+    global is_receiving_file, current_incoming_file_path, bytes_received_for_file, expected_file_size, incoming_file_writer, incoming_file_sender_nick, nickname, user_color, todo_list_local_copy, expected_confirmation_filename, file_transfer_ready_event
+
+    while True:
+        try:
+            # --- High-priority: Handle incoming File Data Chunks ---
+            if is_receiving_file and incoming_file_writer:
+                bytes_to_read_now = min(BUFFER_SIZE, expected_file_size - bytes_received_for_file)
                 
-                if found_file_info_key is not None:
-                    # Update the placeholder key with the actual file_id from server
-                    file_info = self.file_transfer_data[found_file_info_key]
-                    self.file_transfer_data[file_id] = file_info
-                    del self.file_transfer_data[found_file_info_key]
+                if bytes_to_read_now <= 0:
+                    pass 
+                else:
+                    file_data_chunk = client_socket.recv(bytes_to_read_now)
                     
-                    print(f"[FILE TRANSFER] Recipient accepted transfer for file ID {file_id}. Ready to send chunks.")
-                    asyncio.create_task(self.send_file_chunks(file_id)) # Start sending
-                else:
-                    print(f"[CLIENT ERROR] Received ready signal for unknown or unrequested file ID {file_id}.")
-            except ValueError:
-                print("[CLIENT ERROR] Invalid FILE_TRANSFER_READY format.")
-        elif message.startswith("FILE_CHUNK_RECEIVED:"):
-            # Format: FILE_CHUNK_RECEIVED:<file_id>:<chunk_index>
-            # This is an ACK from server, sender can send next chunk
-            pass # Handled internally by send_file_chunks (though our simple implementation doesn't strictly wait for it)
-        elif message.startswith("FILE_CHUNK_FORWARD:"):
-            # Format: FILE_CHUNK_FORWARD:<file_id>:<chunk_index>:<file_name>:<base64_data>
-            try:
-                parts = message.split(':', 4)
-                if len(parts) == 5:
-                    file_id = int(parts[1])
-                    chunk_index = int(parts[2])
-                    file_name = parts[3] # Included for recipient context
-                    base64_data = parts[4]
-                    asyncio.create_task(self.receive_file_chunk(file_id, chunk_index, base64_data, file_name))
-                else:
-                    print("[CLIENT ERROR] Invalid FILE_CHUNK_FORWARD format.")
-            except ValueError:
-                print("[CLIENT ERROR] Invalid FILE_CHUNK_FORWARD data.")
-        elif message.startswith("FILE_TRANSFER_COMPLETE:"):
-            # Format: FILE_TRANSFER_COMPLETE:<file_id>
-            try:
-                file_id = int(message.split(':')[1])
-                if file_id in self.file_transfer_data:
-                    file_info = self.file_transfer_data[file_id]
-                    # Check if this client was the sender or recipient
-                    if file_info.get("sender") == self.username: # This client was the sender
-                        print(f"\n[FILE TRANSFER] Successfully sent '{file_info['name']}' (ID: {file_id}) to {file_info.get('recipient', 'unknown')}.")
-                    else: # This client was the recipient, and it's confirmed complete
-                        print(f"\n[FILE TRANSFER] Transfer complete for '{file_info['name']}' (ID: {file_id}).")
-                    del self.file_transfer_data[file_id] # Clean up
-            except ValueError:
-                print("[CLIENT ERROR] Invalid FILE_TRANSFER_COMPLETE format.")
-        else:
-            # --- Regular chat message handling with TAGGING HIGHLIGHTING ---
-            display_message = message # Start with the original message
+                    if not file_data_chunk: 
+                        print(f"\n{CLIENT_ERROR_COLOR}Server disconnected during file data transfer for '{current_incoming_file_path}'.{COLOR_RESET}")
+                        if incoming_file_writer:
+                            incoming_file_writer.close()
+                            os.remove(current_incoming_file_path) 
+                        is_receiving_file = False
+                        print(f"{CLIENT_ERROR_COLOR}[FILE TRANSFER]: Transfer cancelled due to server disconnection.{COLOR_RESET}")
+                        client_socket.close()
+                        sys.exit() 
+                    
+                    incoming_file_writer.write(file_data_chunk)
+                    bytes_received_for_file += len(file_data_chunk)
+                    
+                    print_progress_bar("Receiving", bytes_received_for_file, expected_file_size)
+                    
+                    if bytes_received_for_file >= expected_file_size:
+                        incoming_file_writer.close()
+                        is_receiving_file = False
+                        sys.stdout.write('\n') 
+                        print(f"{CLIENT_INFO_COLOR}[FILE TRANSFER]: File '{os.path.basename(current_incoming_file_path)}' from {incoming_file_sender_nick} received successfully to '{current_incoming_file_path}'!{COLOR_RESET}")
+                        
+                        current_incoming_file_path = None
+                        incoming_file_writer = None
+                        incoming_file_sender_nick = None
+                    continue 
 
-            # Check if this message is a regular chat message (not a server notification or file message)
-            # and if it contains our username tagged
-            if not message.startswith("[SERVER]") and not message.startswith("FILE_"):
-                tag_to_find = f"@{self.username}"
+            # --- Default: Handle Regular Chat Messages and Server Commands ---
+            message_bytes = client_socket.recv(BUFFER_SIZE)
+            
+            if not message_bytes: 
+                print(f"{CLIENT_INFO_COLOR}Disconnected from server.{COLOR_RESET}")
+                client_socket.close()
+                sys.exit() 
+
+            decoded_message = message_bytes.decode('utf-8').strip()
+
+            # --- Handle Initial Profile Data from Server ---
+            if decoded_message.startswith("YOUR_PROFILE_DATA|"):
+                try:
+                    profile_json_str = decoded_message.split('|', 1)[1]
+                    profile_data = json.loads(profile_json_str)
+                    
+                    # Update client's local variables from profile
+                    nickname = profile_data['nickname']
+                    user_color = profile_data['color']
+                    todo_list_local_copy = profile_data['todos'] # Update local to-do list copy
+                    
+                    print(f"{CLIENT_INFO_COLOR}Profile loaded: Nickname='{nickname}', Color='{user_color}', To-Do items={len(todo_list_local_copy)}{COLOR_RESET}")
+                except json.JSONDecodeError as e:
+                    print(f"{CLIENT_ERROR_COLOR}Error parsing profile data from server: {e} - {profile_json_str}{COLOR_RESET}")
+                except Exception as e:
+                    print(f"{CLIENT_ERROR_COLOR}Unexpected error processing profile data: {e}{COLOR_RESET}")
+                continue # Do not print this message as a chat message
+            
+            # --- Handle FILE_READY_TO_SEND confirmation from server ---
+            # This is specifically for the sending client to know they can start sending data
+            elif _strip_ansi_codes(decoded_message).startswith("FILE_READY_TO_SEND "):
+                confirmed_filename = _strip_ansi_codes(decoded_message).split(' ', 1)[1]
+                print(f"{CLIENT_INFO_COLOR}Server confirmed: {confirmed_filename} is ready for transfer.{COLOR_RESET}")
+                expected_confirmation_filename = confirmed_filename # Store for write thread verification
+                file_transfer_ready_event.set() # Signal the write thread
+                continue # Don't print this message again as it's an internal signal
+
+            # --- Handle Mentions ---
+            # Check for nickname mention, then strip ANSI codes for accurate check
+            message_without_ansi = _strip_ansi_codes(decoded_message)
+            if nickname and f"@{nickname}" in message_without_ansi:
+                sys.stdout.write(f"\r{MENTION_HIGHLIGHT_BG}*** YOU WERE MENTIONED ***{COLOR_RESET}\n")
+                sys.stdout.write(decoded_message + '\n') # Print original message with colors
+                sys.stdout.flush()
+            
+            # --- Client shutdown messages (server-initiated) ---
+            # These are critical error/disconnect messages, print plainly.
+            elif decoded_message.endswith("You are banned from this server by IP address.") or \
+                 decoded_message.endswith("You are banned from this server. Your profile is marked as banned.") or \
+                 decoded_message.endswith("Nickname already taken! Please choose another.") or \
+                 decoded_message.endswith("Server is shutting down... Goodbye!"):
+                print(decoded_message)
+                client_socket.close()
+                sys.exit() 
+            
+            # --- Default: Print message as is (server sends with colors) ---
+            else:
+                print(decoded_message)
+
+        except ConnectionResetError:
+            print(f"{CLIENT_INFO_COLOR}Disconnected from server.{COLOR_RESET}")
+            client_socket.close()
+            sys.exit() 
+        except Exception as e:
+            print(f"{CLIENT_ERROR_COLOR}An unexpected error occurred in receive thread: {e}{COLOR_RESET}")
+            client_socket.close()
+            sys.exit()
+
+# Helper to strip ANSI codes for accurate mention checking
+def _strip_ansi_codes(s):
+    """Strips ANSI escape codes from a string."""
+    import re
+    return re.sub(r'\x1b\[[0-9;]*m', '', s)
+
+# --- Function to Convert Text to ASCII Art ---
+def text_to_ascii_art(text, font_name="standard"):
+    """Converts a given text string into ASCII art using predefined fonts."""
+    text_upper = text.upper() 
+    if font_name not in ascii_fonts:
+        print(f"{CLIENT_ERROR_COLOR}Error: ASCII art font '{font_name}' not found. Using standard.{COLOR_RESET}")
+        font_name = "standard"
+    font = ascii_fonts[font_name]
+    
+    char_height = 0
+    if font:
+        for char_data in font.values():
+            char_height = len(char_data)
+            break
+    if char_height == 0: 
+        char_height = 5
+        
+    art_lines = [""] * char_height 
+    
+    for char in text_upper:
+        if char in font:
+            for i in range(char_height):
+                art_lines[i] += font[char][i] + " " 
+        elif char == ' ': 
+            for i in range(char_height):
+                art_lines[i] += "   " 
+        else: 
+            for i in range(char_height):
+                art_lines[i] += "? " 
+    return f"{ASCII_ART_COLOR}{'\n'.join(art_lines)}{COLOR_RESET}"
+
+
+# --- Function to Write/Send Messages to Server ---
+def write():
+    """Handles user input from the console and sends it to the server."""
+    global nickname, expected_confirmation_filename, file_transfer_ready_event
+    while True:
+        try:
+            # Enhanced input prompt
+            message = input(f"{user_color}{nickname}> {COLOR_RESET}")
+            
+            # --- Prevent sending commands/messages while receiving a file ---
+            if is_receiving_file: 
+                print(f"{CLIENT_ERROR_COLOR}Cannot send commands/messages while receiving another file. Please wait for current transfer to complete.{COLOR_RESET}")
+                continue
+
+            # --- Work Topic Commands (client-side checks for usage) ---
+            if message.startswith('/newwork '):
+                parts = message.split(' ', 1)
+                if len(parts) == 2:
+                    send_message(client_socket, message)
+                else:
+                    print(f"{CLIENT_ERROR_COLOR}Usage: /newwork <topic_name>{COLOR_RESET}")
+            elif message.startswith('/work '):
+                parts = message.split(' ', 2)
+                if len(parts) == 3: 
+                    send_message(client_socket, message)
+                else:
+                    print(f"{CLIENT_ERROR_COLOR}Usage: /work <topic_name> <message>{COLOR_RESET}")
+            elif message == '/works':
+                send_message(client_socket, message)
+
+            # --- File Transfer Initiation (P2P via /sendfile) ---
+            elif message.startswith('/sendfile '):
+                parts = message.split(' ', 2)
+                if len(parts) < 3:
+                    print(f"{CLIENT_ERROR_COLOR}Usage: /sendfile <recipient_nickname> <path_to_file>{COLOR_RESET}")
+                    continue
                 
-                if tag_to_find in message:
-                    # Replace the tag with a highlighted version using ANSI codes
-                    highlighted_tag = f"{BOLD}{YELLOW}{tag_to_find}{RESET}"
-                    display_message = message.replace(tag_to_find, highlighted_tag)
-            
-            # Print the (potentially) highlighted message
-            print(display_message)
-            # --- END OF NEW TAGGING LOGIC ---
+                recipient_nickname = parts[1]
+                file_path_to_send = parts[2]
 
-    async def input_handler(self):
-        """Handles user input from the console."""
-        while True:
-            try:
-                user_input = await asyncio.to_thread(input, "") # Use to_thread for blocking input
-                if user_input.startswith("/"):
-                    parts = user_input.split(' ', 1)
-                    command = parts[0]
-                    arg = parts[1] if len(parts) > 1 else ""
+                if not os.path.exists(file_path_to_send):
+                    print(f"{CLIENT_ERROR_COLOR}File '{file_path_to_send}' not found.{COLOR_RESET}")
+                    continue
+                
+                file_size = os.path.getsize(file_path_to_send)
+                filename = os.path.basename(file_path_to_send)
 
-                    if command == "/nick":
-                        await self.send_message(f"/nick {arg}")
-                    elif command == "/list":
-                        await self.send_message("/list")
-                    elif command == "/help":
-                        await self.send_message("/help")
-                    elif command == "/file":
-                        # Client side initiation for file transfer
-                        file_parts = arg.split(' ', 1)
-                        if len(file_parts) == 2:
-                            recipient_username = file_parts[0]
-                            file_name_to_send = file_parts[1]
-                            local_file_path = file_name_to_send # Assume local file name is same as display name
-                            
-                            if os.path.exists(local_file_path) and os.path.isfile(local_file_path):
-                                # Store info for sending
-                                # Note: Server will give us file_id. For now, store placeholder
-                                file_id = -1 # Use -1 as placeholder ID for now for the sender's side tracking
-                                self.file_transfer_data[file_id] = {
-                                    "name": os.path.basename(local_file_path),
-                                    "path": local_file_path,
-                                    "recipient": recipient_username,
-                                    "total_chunks": -1 # Will be calculated
-                                }
-                                await self.send_message(f"/file {recipient_username} {os.path.basename(local_file_path)}")
-                                print(f"[CLIENT] Initiating file transfer for '{os.path.basename(local_file_path)}' to {recipient_username}...")
-                            else:
-                                print(f"[CLIENT] Error: File '{local_file_path}' not found locally.")
-                        else:
-                            print("[CLIENT] Usage: /file <recipient_username> <local_file_name_with_extension>")
-                    elif command == "/accept":
-                        try:
-                            file_id = int(arg.strip())
-                            if file_id in self.file_transfer_data:
-                                await self.send_message(f"FILE_TRANSFER_REQUEST_ACCEPTED:{file_id}")
-                                print(f"[CLIENT] Accepted file transfer for ID: {file_id}. Waiting for sender...")
-                            else:
-                                print(f"[CLIENT] Invalid file ID for acceptance. No pending request for {file_id}.")
-                        except ValueError:
-                            print("[CLIENT] Usage: /accept <file_id>")
-                    elif command == "/reject":
-                         try:
-                            file_id = int(arg.strip())
-                            if file_id in self.file_transfer_data:
-                                print(f"[CLIENT] Rejected file transfer for ID: {file_id}.")
-                                del self.file_transfer_data[file_id] # Clean up
-                                # Optionally, send a rejection message to the server/sender
-                            else:
-                                print(f"[CLIENT] Invalid file ID for rejection. No pending request for {file_id}.")
-                         except ValueError:
-                            print("[CLIENT] Usage: /reject <file_id>")
+                if file_size == 0:
+                    print(f"{CLIENT_ERROR_COLOR}Cannot send empty file.{COLOR_RESET}")
+                    continue
+
+                print(f"{CLIENT_INFO_COLOR}Initiating P2P file transfer to {recipient_nickname}: '{filename}' ({file_size} bytes)...{COLOR_RESET}")
+                
+                init_command = f"/sendfile {recipient_nickname} {filename}|{file_size}"
+                send_message(client_socket, init_command)
+                
+                # --- Wait for confirmation from receive thread ---
+                file_transfer_ready_event.clear() # Clear event before waiting
+                
+                if file_transfer_ready_event.wait(timeout=5): # Wait for up to 5 seconds
+                    # Check if the confirmed filename matches the one we're sending
+                    if expected_confirmation_filename == filename:
+                        print(f"{CLIENT_INFO_COLOR}Server confirmed. Starting P2P file transfer...{COLOR_RESET}")
                     else:
-                        print(f"[CLIENT] Unknown command: {command}. Type /help for assistance.")
+                        print(f"{CLIENT_ERROR_COLOR}Server sent an unexpected file confirmation. Aborting file transfer.{COLOR_RESET}")
+                        file_transfer_ready_event.clear()
+                        expected_confirmation_filename = None
+                        continue # Abort and go back to input prompt
                 else:
-                    # Regular chat message
-                    await self.send_message(user_input)
-            except EOFError:
-                print("[CLIENT] Exiting chat.")
-                break
-            except Exception as e:
-                print(f"[CLIENT ERROR] Error during input: {e}")
+                    print(f"{CLIENT_ERROR_COLOR}Server did not respond with file transfer confirmation in time. Aborting.{COLOR_RESET}")
+                    file_transfer_ready_event.clear()
+                    expected_confirmation_filename = None
+                    continue # Abort and go back to input prompt
+                
+                # Reset event and filename after successful check for next transfer
+                file_transfer_ready_event.clear()
+                expected_confirmation_filename = None
 
-    async def send_file_chunks(self, file_id_from_server):
-        # This function is called by the sender client
-        # It's triggered after the server sends FILE_TRANSFER_READY
-        
-        # Find the actual file_info related to the placeholder
-        file_info = None
-        for temp_id, info in list(self.file_transfer_data.items()): # Use list() to allow modification during iteration
-            # Identify the file info that was initiated by this client and is awaiting an ID from the server
-            if temp_id == -1 and info.get("recipient") is not None and info.get("name") is not None:
-                 file_info = info
-                 # Update file_id in self.file_transfer_data for this entry to the actual ID from server
-                 self.file_transfer_data[file_id_from_server] = file_info
-                 del self.file_transfer_data[temp_id] # Remove placeholder
-                 break
-        
-        if not file_info:
-            print(f"[CLIENT ERROR] Cannot send file. No matching file info for actual ID {file_id_from_server}.")
-            return
-        
-        local_file_path = file_info["path"]
-        file_name = file_info["name"]
+                # --- Start sending raw file bytes (UNENCRYPTED) ---
+                with open(file_path_to_send, 'rb') as f:
+                    bytes_sent = 0
+                    while bytes_sent < file_size:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break 
+                        
+                        client_socket.sendall(bytes_read)
+                        bytes_sent += len(bytes_read)
+                        
+                        print_progress_bar("Sending", bytes_sent, file_size)
+                        
+                        time.sleep(0.001) 
 
-        try:
-            with open(local_file_path, 'rb') as f:
-                file_data = f.read()
+                sys.stdout.write('\n') 
+                send_message(client_socket, f"/FILE_COMPLETE {filename}")
+                print(f"{CLIENT_INFO_COLOR}Finished sending file '{filename}'.{COLOR_RESET}")
+                # ADDED: Small delay after sending file complete message
+                time.sleep(0.1) 
+
+
+            # --- Broadcast File Transfer Initiation (via /sendallfile) ---
+            elif message.startswith('/sendallfile '):
+                parts = message.split(' ', 1) 
+                if len(parts) < 2:
+                    print(f"{CLIENT_ERROR_COLOR}Usage: /sendallfile <path_to_file>{COLOR_RESET}")
+                    continue
+                
+                file_path_to_send = parts[1]
+
+                if not os.path.exists(file_path_to_send):
+                    print(f"{CLIENT_ERROR_COLOR}File '{file_path_to_send}' not found.{COLOR_RESET}")
+                    continue
+                
+                file_size = os.path.getsize(file_path_to_send)
+                filename = os.path.basename(file_path_to_send)
+
+                if file_size == 0:
+                    print(f"{CLIENT_ERROR_COLOR}Cannot send empty file.{COLOR_RESET}")
+                    continue
+
+                print(f"{CLIENT_INFO_COLOR}Initiating broadcast file transfer: '{filename}' ({file_size} bytes)...{COLOR_RESET}")
+                
+                init_command = f"/sendallfile {filename}|{file_size}"
+                send_message(client_socket, init_command)
+                
+                # --- Wait for confirmation from receive thread ---
+                file_transfer_ready_event.clear() # Clear event before waiting
+                
+                if file_transfer_ready_event.wait(timeout=5): # Wait for up to 5 seconds
+                    # Check if the confirmed filename matches the one we're sending
+                    if expected_confirmation_filename == filename:
+                        print(f"{CLIENT_INFO_COLOR}Server confirmed. Starting broadcast file transfer...{COLOR_RESET}")
+                    else:
+                        print(f"{CLIENT_ERROR_COLOR}Server sent an unexpected file confirmation. Aborting broadcast file transfer.{COLOR_RESET}")
+                        file_transfer_ready_event.clear()
+                        expected_confirmation_filename = None
+                        continue # Abort and go back to input prompt
+                else:
+                    print(f"{CLIENT_ERROR_COLOR}Server did not respond with broadcast file transfer confirmation in time. Aborting.{COLOR_RESET}")
+                    file_transfer_ready_event.clear()
+                    expected_confirmation_filename = None
+                    continue # Abort and go back to input prompt
+                
+                # Reset event and filename after successful check for next transfer
+                file_transfer_ready_event.clear()
+                expected_confirmation_filename = None
+
+                # --- Start sending raw file bytes (UNENCRYPTED) ---
+                with open(file_path_to_send, 'rb') as f:
+                    bytes_sent = 0
+                    while bytes_sent < file_size:
+                        bytes_read = f.read(BUFFER_SIZE)
+                        if not bytes_read:
+                            break 
+                        
+                        client_socket.sendall(bytes_read)
+                        bytes_sent += len(bytes_read)
+                        
+                        print_progress_bar("Sending", bytes_sent, file_size)
+                        
+                        time.sleep(0.001) 
+
+                sys.stdout.write('\n')
+                send_message(client_socket, f"/FILE_COMPLETE {filename}")
+                print(f"{CLIENT_INFO_COLOR}Finished sending broadcast file '{filename}'.{COLOR_RESET}")
+                # ADDED: Small delay after sending file complete message
+                time.sleep(0.1)
+
+            # --- MODIFIED: To-Do List Commands (SEND TO SERVER) ---
+            elif message.startswith('/todo'):
+                # All /todo commands are now sent directly to the server
+                # The server will handle the logic and send back appropriate responses
+                send_message(client_socket, message)
             
-            total_chunks = (len(file_data) + CHUNK_SIZE - 1) // CHUNK_SIZE
-            file_info["total_chunks"] = total_chunks # Store total chunks
-            print(f"[FILE TRANSFER] Sending '{file_name}' in {total_chunks} chunks (ID: {file_id_from_server})...")
+            # --- ASCII Art Command ---
+            elif message.startswith('/big '):
+                text_to_convert = message[len('/big '):].strip() 
+                if text_to_convert:
+                    art_output = text_to_ascii_art(text_to_convert)
+                    send_message(client_socket, art_output) 
+                else:
+                    print(f"{CLIENT_ERROR_COLOR}Usage: /big <text_to_convert>{COLOR_RESET}")
 
-            # Send expected_chunks count with the first chunk
-            first_chunk_data = file_data[0:CHUNK_SIZE]
-            base64_encoded_chunk = base64.b64encode(first_chunk_data).decode('utf-8')
-            # Add EXPECTED_CHUNKS header to the first chunk
-            initial_message = f"FILE_CHUNK:{file_id_from_server}:0:EXPECTED_CHUNKS:{total_chunks}:{base64_encoded_chunk}"
-            await self.send_message(initial_message)
-            
-            # For simplicity, we just send chunks sequentially. A real system would use more robust flow control.
-            for i in range(1, total_chunks):
-                chunk_data = file_data[i * CHUNK_SIZE : (i + 1) * CHUNK_SIZE]
-                base64_encoded_chunk = base64.b64encode(chunk_data).decode('utf-8')
-                await self.send_message(f"FILE_CHUNK:{file_id_from_server}:{i}:{base64_encoded_chunk}")
-                # A small delay can help prevent overwhelming the server or network
-                # await asyncio.sleep(0.01)
+            # --- Other commands forwarded directly to server ---
+            elif message.startswith('/away') or message == '/back' or message.startswith('/history') \
+                 or message.startswith('/pm') or message.startswith('/color') \
+                 or message.startswith('/users') or message.startswith('/addadmin') \
+                 or message.startswith('/kick') or message.startswith('/ban') \
+                 or message.startswith('/mute') or message.startswith('/unmute') \
+                 or message.startswith('/announce') or message.startswith('/motd') \
+                 or message == '/shutdown' or message == '/help': # New: /help
+                send_message(client_socket, message) 
 
-            print(f"[FILE TRANSFER] All chunks for '{file_name}' (ID: {file_id_from_server}) sent to server.")
+            # --- Regular Chat Message ---
+            else:
+                send_message(client_socket, message) 
 
-        except FileNotFoundError:
-            print(f"[CLIENT ERROR] Local file '{local_file_path}' not found for transfer.")
         except Exception as e:
-            print(f"[CLIENT ERROR] Error sending file '{file_name}': {e}")
-        finally:
-            # Clean up sender-side info after all chunks are intended to be sent
-            # The server will send a FILE_TRANSFER_COMPLETE when done with its side
-            if file_id_from_server in self.file_transfer_data:
-                del self.file_transfer_data[file_id_from_server]
+            print(f"{CLIENT_ERROR_COLOR}Error in write thread: {e}{COLOR_RESET}")
+            client_socket.close()
+            sys.exit() 
 
+# --- Client Setup ---
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    client_socket.connect((HOST, PORT))
+except ConnectionRefusedError:
+    print(f"{CLIENT_ERROR_COLOR}Connection refused: Server at {HOST}:{PORT} is not running or unreachable.{COLOR_RESET}")
+    sys.exit() 
+except Exception as e:
+    print(f"{CLIENT_ERROR_COLOR}An error occurred while connecting: {e}{COLOR_RESET}")
+    sys.exit()
 
-    async def receive_file_chunk(self, file_id, chunk_index, base64_data, file_name):
-        # This function is called by the recipient client
-        if file_id not in self.file_transfer_data:
-            print(f"[CLIENT ERROR] Received chunk for unknown file ID {file_id}.")
-            return
-        
-        file_info = self.file_transfer_data[file_id]
-        
-        # Check if this is the first chunk with total_chunks header
-        if chunk_index == 0 and "EXPECTED_CHUNKS:" in base64_data:
-            try:
-                header_parts = base64_data.split(':', 1)
-                file_info["total_chunks"] = int(header_parts[0].split(':')[1])
-                base64_data = header_parts[1] # Actual data starts after header
-                print(f"[FILE TRANSFER] Receiving '{file_name}' (ID: {file_id}) in {file_info['total_chunks']} chunks.")
-            except ValueError:
-                print("[CLIENT ERROR] Invalid EXPECTED_CHUNKS header in first chunk.")
-                return
+# --- Initial Nickname Prompt (Client sends its choice to server) ---
+# Server will load profile and use this nickname or update if different
+initial_nickname_choice = input(f"{CLIENT_INFO_COLOR}Choose your nickname (or type 'default' to use previous for your IP): {COLOR_RESET}")
+if not initial_nickname_choice:
+    print(f"{CLIENT_ERROR_COLOR}Nickname cannot be empty. Exiting.{COLOR_RESET}")
+    client_socket.close()
+    sys.exit()
 
-        decoded_data = base64.b64decode(base64_data)
-        
-        # Ensure list is large enough to insert chunk at index
-        if len(file_info["chunks"]) <= chunk_index:
-            file_info["chunks"].extend([None] * (chunk_index + 1 - len(file_info["chunks"])))
-        file_info["chunks"][chunk_index] = decoded_data
-        
-        # Simple progress indicator
-        if file_info["total_chunks"] > 0:
-            sys.stdout.write(f"\r[FILE TRANSFER] Receiving chunk {chunk_index + 1}/{file_info['total_chunks']} for '{file_name}'...")
-            sys.stdout.flush()
+try:
+    client_socket.send(initial_nickname_choice.encode('utf-8'))
+except Exception as e:
+    print(f"{CLIENT_ERROR_COLOR}Failed to send nickname: {e}{COLOR_RESET}")
+    client_socket.close()
+    sys.exit()
 
-        # Check if all chunks received
-        if file_info["total_chunks"] != -1 and all(c is not None for c in file_info["chunks"]) and len(file_info["chunks"]) == file_info["total_chunks"]:
-            print(f"\n[FILE TRANSFER] All chunks received for '{file_name}' (ID: {file_id}). Reconstructing file...")
-            await self.save_received_file(file_info)
-            # Server will also send FILE_TRANSFER_COMPLETE, which triggers further cleanup
+# --- Start Threads ---
+receive_thread = threading.Thread(target=receive)
+receive_thread.daemon = True 
+receive_thread.start()
 
-    async def save_received_file(self, file_info):
-        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-        save_path = file_info["save_path"]
-        
-        # Ensure unique file name if it already exists
-        base, ext = os.path.splitext(save_path)
-        counter = 1
-        while os.path.exists(save_path):
-            save_path = f"{base}_{counter}{ext}"
-            counter += 1
+write_thread = threading.Thread(target=write)
+write_thread.daemon = True
+write_thread.start()
 
-        try:
-            with open(save_path, 'wb') as f:
-                for chunk in file_info["chunks"]:
-                    if chunk is not None: # Ensure chunk exists before writing
-                        f.write(chunk)
-            print(f"[FILE TRANSFER] File saved to: {save_path}")
-        except Exception as e:
-            print(f"[CLIENT ERROR] Failed to save file '{file_info['name']}': {e}")
-        finally:
-            # Clean up recipient-side info. This will be triggered by FILE_TRANSFER_COMPLETE from server.
-            # No need to del self.file_transfer_data[file_info["id"]] here as FILE_TRANSFER_COMPLETE handler does it.
-            pass
+# Keep the main thread alive indefinitely.
+while True:
+    try:
+        time.sleep(1)
+        if not receive_thread.is_alive() or not write_thread.is_alive():
+            print(f"{CLIENT_ERROR_COLOR}A communication thread has stopped. Exiting client.{COLOR_RESET}")
+            break
+    except KeyboardInterrupt:
+        print(f"\n{CLIENT_INFO_COLOR}Exiting chat client gracefully.{COLOR_RESET}")
+        break
+    except Exception as e:
+        print(f"{CLIENT_ERROR_COLOR}An error occurred in main thread: {e}{COLOR_RESET}")
+        break
 
-
-async def main():
-    client = ChatClient(URI)
-    await client.connect() # Ensure connection is established before starting tasks
-
-    # Start tasks for receiving messages and handling input
-    await asyncio.gather(
-        client.receive_messages(),
-        client.input_handler()
-    )
-
-if __name__ == "__main__":
-    # Create the downloads directory if it doesn't exist
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    asyncio.run(main())
+# Clean up before exiting
+client_socket.close()
+print(f"{CLIENT_INFO_COLOR}Client exiting.{COLOR_RESET}")
