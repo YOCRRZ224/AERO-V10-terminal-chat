@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Terminal_UI-Matte%20%26%20Glowing-purple?style=for-the-badge&logo=gnubash" />
   <img src="https://img.shields.io/badge/Version-AERO--V10-7C3AED?style=for-the-badge" />
 </p>
-
+<img src="https://img.shields.io/badge/License-MIT-00bfff?style=for-the-badge" alt="MIT License" />
 ---
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=8000ff&height=120&section=header&text=System%20Online%20%F0%9F%9A%80&fontAlign=50&fontColor=ffffff" />
