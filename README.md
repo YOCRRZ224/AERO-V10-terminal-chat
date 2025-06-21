@@ -8,7 +8,9 @@
   <img src="https://img.shields.io/badge/Terminal_UI-Matte%20%26%20Glowing-purple?style=for-the-badge&logo=gnubash" />
   <img src="https://img.shields.io/badge/Version-AERO--V10-7C3AED?style=for-the-badge" />
 </p>
-<img src="https://img.shields.io/badge/License-MIT-00bfff?style=for-the-badge" alt="MIT License" />
+<p align="center">
+  <img src="https://img.shields.io/badge/License-MIT-%238000ff?style=for-the-badge&logo=license" alt="MIT License" />
+</p>
 ---
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=8000ff&height=120&section=header&text=System%20Online%20%F0%9F%9A%80&fontAlign=50&fontColor=ffffff" />
@@ -143,3 +145,11 @@ cd AERO-V10
 ```bash
 nano server.py
 ```
+---
+
+## ⚖️ License
+
+This project is licensed under the [MIT License](./LICENSE).  
+You are free to use, modify, and distribute this software with credit.
+
+> © 2025 YOCRRZ — Built with 💻 on Android, by willpower, not hardware.
