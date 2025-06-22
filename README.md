@@ -81,7 +81,7 @@
 ## 🚀 Usage Instructions
 
 ```bash
-git clone https://github.com/YOCRRZ/AERO-V10-terminal-chat.git
+git clone https://github.com/yocrrz224/AERO-V10-terminal-chat.git
 cd AERO-V10-terminal-chat
 
 # Start server (Termux)
