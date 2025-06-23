@@ -16,7 +16,9 @@
 <img src="https://capsule-render.vercel.app/api?type=waving&color=8000ff&height=120&section=header&text=System%20Online%20%F0%9F%9A%80&fontAlign=50&fontColor=ffffff" />
 
 ---
-
+## WARNING ⚠️
+YOU HAVE TO CONFGURE THE SERVER FILE AND INSTALL MANY DEPENDENCIES TO TAKE FULL ENJOY OF ALL FEATURES THIS IS A COMPLEX PROCESS FOR SOME DEVS WHICH ARE NON FAMILIER WITH THIS I WILL PUBLISH THE WHOLE VIDEO TO GUID STEP BY STEP VERY SOON
+FOR NOW IF U ARE ELITE JUST LEARN THE CONCEP # CAUSE LIMITS ARE FOR MACHINE NOT MINDS
 ## 🌌 Terminal Features Breakdown
 
 | Command/Feature       | Description |
