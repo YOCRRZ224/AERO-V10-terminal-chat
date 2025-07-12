@@ -17,6 +17,7 @@
 </p>
 
 ---
+## WAIT WAIT THIS PROJECT IS UNDER DEVLOPMENT CURRENTLY i am working on ngrok and wss so wait some time (but u can try the project many things soon)
 
 ## 📸 Live Preview
 
