@@ -1,157 +1,176 @@
-
-<h1 align="center">🚀 AERO-V10 • Terminal OS Chat System</h1>
-<p align="center"><i>"Because limits are for operating systems, not minds."</i></p>
+# 🚀 AERO-V10 TERMINAL CHAT SYSTEM
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Creator-YOCRRZ-purple?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Built%20With-Termux%20&%20TV-7E22CE?style=for-the-badge&logo=android" />
-  <img src="https://img.shields.io/badge/Terminal_UI-Matte%20%26%20Glowing-purple?style=for-the-badge&logo=gnubash" />
-  <img src="https://img.shields.io/badge/Version-AERO--V10-7C3AED?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Built%20with-Termux-orange?style=for-the-badge&logo=gnu-bash" alt="Termux">
+  <img src="https://img.shields.io/badge/WebSocket-Realtime-blue?style=for-the-badge&logo=websocket" alt="WebSocket">
+  <img src="https://img.shields.io/badge/Streaming-YouTube%20%26%20Radio-red?style=for-the-badge&logo=mpv" alt="Streaming">
+  <img src="https://img.shields.io/github/stars/YOCRRZ224/AERO-V10-terminal-chat?style=for-the-badge&logo=github&label=Stars" alt="Stars">
+  <img src="https://img.shields.io/github/forks/YOCRRZ224/AERO-V10-terminal-chat?style=for-the-badge&logo=github&label=Forks" alt="Forks">
+  <img src="https://img.shields.io/github/license/YOCRRZ224/AERO-V10-terminal-chat?style=for-the-badge&color=blueviolet" alt="License">
 </p>
+
 <p align="center">
-  <img src="https://img.shields.io/badge/License-MIT-%238000ff?style=for-the-badge&logo=license" alt="MIT License" />
+  <img src="https://img.shields.io/badge/Terminal-Chat%20System-green?style=flat-square&logo=gnubash" alt="Terminal">
+  <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=flat-square&logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/NGROK-Integrated-brightgreen?style=flat-square&logo=ngrok" alt="ngrok">
+  <img src="https://img.shields.io/github/last-commit/YOCRRZ224/AERO-V10-terminal-chat?style=flat-square&logo=git" alt="Last Commit">
 </p>
----
-
-<img src="https://capsule-render.vercel.app/api?type=waving&color=8000ff&height=120&section=header&text=System%20Online%20%F0%9F%9A%80&fontAlign=50&fontColor=ffffff" />
-
----
-## WARNING ⚠️
-YOU HAVE TO CONFGURE THE SERVER FILE AND INSTALL MANY DEPENDENCIES TO TAKE FULL ENJOY OF ALL FEATURES THIS IS A COMPLEX PROCESS FOR SOME DEVS WHICH ARE NON FAMILIER WITH THIS I WILL PUBLISH THE WHOLE VIDEO TO GUID STEP BY STEP VERY SOON
-FOR NOW IF U ARE ELITE JUST LEARN THE CONCEP # CAUSE LIMITS ARE FOR MACHINE NOT MINDS
-## 🌌 Terminal Features Breakdown
-
-| Command/Feature       | Description |
-|------------------------|-------------|
-| `/nickname` & `/color` | Custom nicknames with protected color roles |
-| `/mute`, `/ban`        | Role-based moderation (admin/mod/client) |
-| `/send`                | Upload & share files via GDrive logic |
-| `/work`                | Track group projects inside terminal |
-| `!ai`, `!joke`, `!calc`, `!ascii`, `!weather` | Plugins with AI & API power |
-| `/mode radio`, `/mode streaming` | Dual-mode music via `yt-dlp` or online stations |
-| `/queue`               | View music queue |
-| 🔠 Emoji Shortcodes     | `:fire:` → 🔥, `:bolt:` → ⚡, etc |
-| 🧠 Gemini AI Integration | Live AI prompt engine |
-| 🎨 UX: Color roles, emojis, and timestamp control |
 
 ---
 
-## 🧠 Built For Devs, By A Dev
+## 📸 Live Preview
 
-> 💻 100% hand-coded inside Termux & Pydroid  
-> 📺 All created on Android TV + phones  
-> 🛠 No PC. No fancy setup. Just willpower.
+> _(Replace these with screenshots or terminal gifs)_
 
----
-
-## 🎨 UI / UX Highlights
-
-| Element         | Design Feature |
-|-----------------|----------------|
-| Website Theme   | Glassmorphism + terminal hybrid |
-| Colors          | Purples, neons, motion shadows |
-| Font            | Futuristic font (Anurati) |
-| Animations      | Typing, scroll-fade, glow buttons |
-| Terminal Echo   | Custom echo effects (with self-type display) |
-| Sound Effects   | Typing + click + boot sound |
+| Server UI Banner | Styled Client |
+|------------------|---------------|
+| ![Server](docs/server_ui.png) | ![Client](docs/client_ui.png) |
 
 ---
 
-## 📊 GitHub Visuals & Contributions
+## ✨ Dynamic Features
 
-<div align="center">
-<img src="https://github-readme-stats.vercel.app/api?username=YOCRRZ224&theme=dracula&show_icons=true&count_private=true" width="47%" />
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=YOCRRZ224&layout=compact&theme=radical" width="47%" />
-</div>
-
----
-
-## 💻 Live Website (Feel It)
-
-> 🌐 **[→ AERO-V10 Website](https://yocrrz224.github.io/AERO-V10-terminal-chat/)**
-
-- Glass + Terminal interface  
-- Typing animations + motion blur  
-- GitHub-connected button  
-- Full dark mode & neon UI  
-- Real terminal input feel  
-- Live sound and hover feedback  
-- Floating panels and scroll-reactive sections  
+| Feature                    | Status ✅ | Description                                                             |
+|---------------------------|----------|-------------------------------------------------------------------------|
+| Realtime WebSocket Chat   | ✅       | Connects multiple clients using async Python sockets                    |
+| Role-Based Access         | ✅       | IP-based Admin/Mod/Client control system                                |
+| Music Streaming (YouTube) | ✅       | `!play <song>` via `yt-dlp` + `mpv`                                     |
+| Radio Stations            | ✅       | `!stations` & `!playstation <num>` using public internet radio URLs     |
+| Music Queue               | ✅       | `/queue` to display currently queued tracks                             |
+| Task Management           | ✅       | `/newwork`, `/work`, `/remwork` with persistent storage in JSON         |
+| Emoji Shortcodes          | ✅       | `:fire:` → 🔥, `:zap:` → ⚡ etc.                                          |
+| Custom Nickname + Colors  | ✅       | `/nick`, `/color` command to personalize client name                    |
+| Ngrok Integration         | ✅       | Auto-detect and display public `wss://` address via ngrok API           |
+| Plugin Commands           | ✅       | `!joke`, `!ascii`, `!guess`, `!rps`, `!ai`, `!rickroll`, etc.           |
+| Admin Controls            | ✅       | `/mute`, `/ban`, `/kick`, `/mode` switch, IP detection                  |
+| Persistent Data           | ✅       | Usernames, mutes, todo stored in `server_data.json`                     |
+| Cross-Terminal Support    | ✅       | Works on Termux, Pydroid, Android TV, Linux                             |
 
 ---
 
-## 🚀 Usage Instructions
+## 🧰 Installation Guide
+
+### 🔧 Prerequisites (Termux / Linux)
 
 ```bash
-git clone https://github.com/yocrrz224/AERO-V10-terminal-chat.git
-cd AERO-V10-terminal-chat
-
-# Start server (Termux)
-python3 server.py
-
-# Start client (Pydroid/Termux)
-python3 client.py
+pkg update
+pkg install python git curl mpv unzip
+pip install websockets termcolor pyfiglet yt-dlp rich
 ```
 
-To use **Ngrok**:
+### 🛰️ Ngrok Setup
+
 ```bash
-ngrok tcp 55555
-# Use the public IP in client.py
+curl -O https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-arm.zip
+unzip ngrok-stable-linux-arm.zip
+chmod +x ngrok
+./ngrok config add-authtoken <YOUR_NGROK_TOKEN>
+```
+
+Get token here → [https://dashboard.ngrok.com/get-started/setup](https://dashboard.ngrok.com/get-started/setup)
+
+---
+
+## 🚀 Getting Started
+
+### ⏯️ Start Server
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+Outputs:
+```
+✅ Public WebSocket URL: wss://yourid.ngrok-free.app
 ```
 
 ---
 
-## 🧩 Supported Plugin API
-
-| Plugin     | API / Logic    | Status |
-|------------|----------------|--------|
-| `!weather` | OpenWeatherMap | ✅ Free key |
-| `!ai`      | Gemini AI      | ✅ Key required |
-| `!joke`    | JokeAPI        | ✅ Public |
-| `!ascii`   | PyFiglet       | ✅ Offline |
-| `!calc`    | Secure `eval()`| ✅ Offline |
-| `/send`    | GDrive Logic   | ✅ Requires auth |
-| Music      | `yt-dlp`, `mpv`| ✅ Streaming + queue |
-
----
-
-## 🔥 Motto
+### 💬 Run Clients (Other terminal/device)
 
 ```bash
-YOCRRZ: Because limits are for operating systems, not minds.
+python client_ws_aerov10.py
+```
+
+Prompt:
+```
+🌐 WebSocket URL: wss://yourid.ngrok-free.app
+🤖 Nickname: yourname
 ```
 
 ---
 
-## 🧬 Terminal Bootline
+## 💡 Example Commands
 
-```bash
-> USER: YOCRRZ
-> SYSTEM: AERO-V10
-> STATUS: Unstoppable
-> MODE: CREATOR
+| Type         | Command / Plugin           | Example                        |
+|--------------|----------------------------|--------------------------------|
+| Chat Message | -                          | Hello World                    |
+| Music        | `!play hello`              | Play YouTube audio             |
+| Radio        | `!stations`, `!playstation 1` | Listen to SomaFM, etc.         |
+| Tasks        | `/newwork ...`, `/work`    | Add/show/remove todos          |
+| Admin        | `/mute`, `/ban`, `/kick`   | Requires admin IP              |
+| Plugins      | `!ascii`, `!joke`, `!guess`| Fun commands                   |
+| Theme        | `/color red`               | Change name color              |
+
+---
+
+## 📂 Folder Structure
+
+```txt
+AERO-V10/
+├── server_ws_aerov10.py      # WebSocket server logic
+├── client_ws_aerov10.py      # Terminal client interface
+├── start.sh                  # ngrok-integrated launcher
+├── ngrok                     # Binary
+├── server_data.json          # Auto-generated persistent data
+├── docs/                     # Screenshots, GIFs
+│   ├── server_ui.png
+│   └── client_ui.png
+└── README.md                 # You're here
 ```
 
 ---
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=8000ff&height=120&section=footer&text=CODE%20IS%20WHO%20I%20AM&fontAlign=50&fontColor=ffffff" />
+## ❓ FAQ
 
-## IMPORTANT 🗞️
+### Can I use the same phone as server + client?
+✅ Yes! Just open two Termux sessions. One runs server, one runs client.
+
+### Music isn't playing?
+Install `mpv` via Termux:
 ```bash
-CONFIGURE THE SERVER FIRST BY PASTING YOUR API FOR GEMINI AND OPEN WEATHER MAP ALSO CONFIGURE THE IP ADDRESS FOR ADMIN AND ON WHICH IP ADDRESS THE SERVER IS RUNNING ON
+pkg install mpv
 ```
-DO THIS 
-```bash
-cd AERO-V10
-```
-```bash
-nano server.py
-```
+
+### Is it encrypted?
+Currently, no. Public WebSocket over TLS via ngrok is secure by tunnel, but not end-to-end.
+
+### How do I become admin?
+Set your IP in `FIRST_ADMIN_IP` in the server file.
+
 ---
 
-## ⚖️ License
+## 🧠 Roadmap
 
-This project is licensed under the [MIT License](./LICENSE).  
-You are free to use, modify, and distribute this software with credit.
+- [ ] GUI Version (DearPyGui)
+- [ ] Encrypted Messaging (E2E)
+- [ ] Web Frontend (React + Flask WebSocket)
+- [ ] Client Themes / Skins
+- [ ] Plugin Folder Loader
 
-> © 2025 YOCRRZ — Built with 💻 on Android, by willpower, not hardware.
+---
+
+## 🙏 Credits
+
+**Lead Developer:** [YOCRRZ](https://github.com/YOCRRZ224)  
+**Assisted by:** [ChatGPT (OpenAI)](https://openai.com/chatgpt)
+
+> Terminal power 💻 + Music + Code = AERO-V10.
+
+---
+
+## 📜 License
+
+MIT — free to modify, improve, remix, or fork!  
+Please give credits when sharing 
