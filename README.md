@@ -25,7 +25,9 @@
 ## 📸 Live Preview
 
 FEEL THIS BEAST BY GOING TO WEBSITE
-- yocrrz224.github.io/AERO-V10-terminal-chat/
+- [yocrrz224.github.io/AERO-V10-terminal-chat/](yocrrz224.github.io/AERO-V10-terminal-chat/)
+
+
 | Server UI Banner | Styled Client |
 |------------------|---------------|
 | ![Server](docs/server_ui.png) | ![Client](docs/client_ui.png) |
