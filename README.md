@@ -14,10 +14,10 @@
   <img src="https://img.shields.io/badge/Python-3.11+-yellow?style=flat-square&logo=python" alt="Python">
   <img src="https://img.shields.io/badge/NGROK-Integrated-brightgreen?style=flat-square&logo=ngrok" alt="ngrok">
   <img src="https://img.shields.io/github/last-commit/YOCRRZ224/AERO-V10-terminal-chat?style=flat-square&logo=git" alt="Last Commit">
+  
 </p>
-<p>
-  ![visitors](https://visitor-badge.glitch.me/badge?page_id=YOCRRZ.AERO-V10-terminal-chat)
-</p>
+
+  
 ---
 ## WAIT WAIT THIS PROJECT IS UNDER DEVLOPMENT CURRENTLY i am working on ngrok and wss so wait some time (but u can try the project many things soon)
 
