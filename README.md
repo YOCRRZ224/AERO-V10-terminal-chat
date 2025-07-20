@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/NGROK-Integrated-brightgreen?style=flat-square&logo=ngrok" alt="ngrok">
   <img src="https://img.shields.io/github/last-commit/YOCRRZ224/AERO-V10-terminal-chat?style=flat-square&logo=git" alt="Last Commit">
   
+  ![👁️ Views](https://komarev.com/ghpvc/?username=YOCRRZ224&label=👁️%20Views&color=161B22&style=flat-square&labelColor=0d1117)
 </p>
 
   
