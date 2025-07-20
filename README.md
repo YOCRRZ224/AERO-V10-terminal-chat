@@ -24,7 +24,7 @@
 
 ## 📸 Live Preview
 
-> _(Replace these with screenshots or terminal gifs)_
+
 
 | Server UI Banner | Styled Client |
 |------------------|---------------|
