@@ -20,7 +20,7 @@
 
   
 ---
-## WAIT WAIT THIS PROJECT IS UNDER DEVLOPMENT CURRENTLY i am working on ngrok and wss so wait some time (but u can try the project many things soon)
+## WAIT WAIT THIS PROJECT IS UNDER DEVLOPMENT CURRENTLY 🚧⚠️ i am working on ngrok and wss but you can try it
 
 ## 📸 Live Preview
 
