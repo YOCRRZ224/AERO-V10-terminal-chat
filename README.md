@@ -135,7 +135,9 @@ AERO-V10/
 │   └── client_ui.png
 └── README.md                 # You're here
 ```
+## Star History
 
+[![Star History Chart](https://api.star-history.com/svg?repos=YOCRRZ224/AERO-V10-terminal-chat&type=Timeline)](https://www.star-history.com/#YOCRRZ224/AERO-V10-terminal-chat&Timeline&LogScale)
 ---
 
 ## ❓ FAQ
