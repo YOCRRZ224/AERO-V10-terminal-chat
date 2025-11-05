@@ -23,7 +23,7 @@ An advanced terminal chat designed for programmers, offering a unique chatting e
   
   ![👁️ Views](https://komarev.com/ghpvc/?username=YOCRRZ224&label=👁️%20Views&color=161B22&style=flat-square&labelColor=0d1117)
 </p>
-# ✨ Key Features & Benefits
+## ✨ Key Features & Benefits
 
 *   **Terminal-Based Chat:** Chat directly from your terminal, minimizing context switching.
 *   **Music Streaming:** Listen to music while coding, directly through the chat interface (YouTube and Radio).
@@ -33,6 +33,24 @@ An advanced terminal chat designed for programmers, offering a unique chatting e
 *   **Avatars & Stickers:** Enhance your chat with personalized avatars and stickers.
 *   **PWA Support:** Installable as a Progressive Web App for a native-like experience.
 
+<p align="center">
+<img src="assetsR/Screenshot_20251105_192013.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
+
+
+<em>Profile Page</em>
+</p>
+<p align="center">
+<img src="assetsR/Screenshot_20251105_191918.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
+
+
+<em>Advance Login Page</em>
+</p>
+<p align="center">
+<img src="assetsR/Screenshot_20251105_192007.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
+
+
+<em>Home</em>
+</p>
 ## 🛠️ Prerequisites & Dependencies
 
 Before you begin, ensure you have the following installed:
