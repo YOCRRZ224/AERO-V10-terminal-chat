@@ -1,5 +1,11 @@
-# 🚀 AERO-V10 TERMINAL CHAT SYSTEM
 
+# 🚀 AERO-V10 Terminal Chat
+
+An advanced terminal chat designed for programmers, offering a unique chatting experience directly within the terminal. Enjoy seamless communication while you code, with features like music streaming and much more.
+
+[![Stars](https://img.shields.io/github/stars/YOCRRZ224/AERO-V10-terminal-chat?style=social)](https://github.com/YOCRRZ224/AERO-V10-terminal-chat/stargazers)
+[![Forks](https://img.shields.io/github/forks/YOCRRZ224/AERO-V10-terminal-chat?style=social)](https://github.com/YOCRRZ224/AERO-V10-terminal-chat/network/members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 <p align="center">
   <img src="https://img.shields.io/badge/Built%20with-Termux-orange?style=for-the-badge&logo=gnu-bash" alt="Termux">
   <img src="https://img.shields.io/badge/WebSocket-Realtime-blue?style=for-the-badge&logo=websocket" alt="WebSocket">
@@ -17,168 +23,129 @@
   
   ![👁️ Views](https://komarev.com/ghpvc/?username=YOCRRZ224&label=👁️%20Views&color=161B22&style=flat-square&labelColor=0d1117)
 </p>
+# ✨ Key Features & Benefits
 
-  
----
-## WAIT WAIT THIS PROJECT IS UNDER DEVLOPMENT CURRENTLY 🚧⚠️ i am working on ngrok and wss but you can try it
+*   **Terminal-Based Chat:** Chat directly from your terminal, minimizing context switching.
+*   **Music Streaming:** Listen to music while coding, directly through the chat interface (YouTube and Radio).
+*   **Real-time Communication:** Uses WebSocket for instant messaging.
+*   **Customizable:** Offers configurable settings to personalize your chat experience.
+*   **User Authentication:** Secure user accounts with password hashing.
+*   **Avatars & Stickers:** Enhance your chat with personalized avatars and stickers.
+*   **PWA Support:** Installable as a Progressive Web App for a native-like experience.
 
-## 📸 Live Preview
+## 🛠️ Prerequisites & Dependencies
 
-FEEL THIS BEAST BY GOING TO WEBSITE
-- [https://yocrrz224.github.io/AERO-V10-terminal-chat/](https://yocrrz224.github.io/AERO-V10-terminal-chat/)
+Before you begin, ensure you have the following installed:
 
+*   **Python:** (version 3.6 or higher)
+*   **pip:** Python package installer
+*   **Flask:** Python web framework
+*   **Flask-SocketIO:** WebSocket integration for Flask
+*   **Werkzeug:** Python WSGI utility library
+*   **requests:** Python HTTP library
+*   **beautifulsoup4:** Python library for pulling data out of HTML and XML files
+*   **yt-dlp:** YouTube download and processing library
+*   **Termux:** (If running on Android)
+*   Any other dependencies listed in `main.py`
 
-| Server UI Banner | Styled Client |
-|------------------|---------------|
-| ![Server](docs/server_ui.png) | ![Client](docs/client_ui.png) |
+## 📦 Installation & Setup Instructions
 
----
+Follow these steps to get the AERO-V10 Terminal Chat up and running:
 
-## ✨ Dynamic Features
+1.  **Clone the repository:**
 
-| Feature                    | Status ✅ | Description                                                             |
-|---------------------------|----------|-------------------------------------------------------------------------|
-| Realtime WebSocket Chat   | ✅       | Connects multiple clients using async Python sockets                    |
-| Role-Based Access         | ✅       | IP-based Admin/Mod/Client control system                                |
-| Music Streaming (YouTube) | ✅       | `!play <song>` via `yt-dlp` + `mpv`                                     |
-| Radio Stations            | ✅       | `!stations` & `!playstation <num>` using public internet radio URLs     |
-| Music Queue               | ✅       | `/queue` to display currently queued tracks                             |
-| Task Management           | ✅       | `/newwork`, `/work`, `/remwork` with persistent storage in JSON         |
-| Emoji Shortcodes          | ✅       | `:fire:` → 🔥, `:zap:` → ⚡ etc.                                          |
-| Custom Nickname + Colors  | ✅       | `/nick`, `/color` command to personalize client name                    |
-| Ngrok Integration         | ✅       | Auto-detect and display public `wss://` address via ngrok API           |
-| Plugin Commands           | ✅       | `!joke`, `!ascii`, `!guess`, `!rps`, `!ai`, `!rickroll`, etc.           |
-| Admin Controls            | ✅       | `/mute`, `/ban`, `/kick`, `/mode` switch, IP detection                  |
-| Persistent Data           | ✅       | Usernames, mutes, todo stored in `server_data.json`                     |
-| Cross-Terminal Support    | ✅       | Works on Termux, Pydroid, Android TV, Linux                             |
+    ```bash
+    git clone https://github.com/YOCRRZ224/AERO-V10-terminal-chat.git
+    cd AERO-V10-terminal-chat
+    ```
 
----
+2.  **Create a virtual environment (optional but recommended):**
 
-## 🧰 Installation Guide
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate  # On Linux/macOS
+    venv\Scripts\activate.bat  # On Windows
+    ```
 
-### 🔧 Prerequisites (Termux / Linux)
+3.  **Install the required Python packages:**
 
-```bash
-pkg update
-pkg install python git curl mpv unzip
-pip install websockets termcolor pyfiglet yt-dlp rich
-```
+    ```bash
+    pip install -r requirements.txt # Create requirements.txt with all dependencies needed from main.py by manually copying them, flask, flask-socketio etc..
+    ```
 
-### 🛰️ Ngrok Setup
+4.  **Set up the database:**
 
-```bash
-curl -O https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-arm.zip
-unzip ngrok-stable-linux-arm.zip
-chmod +x ngrok
-./ngrok config add-authtoken <YOUR_NGROK_TOKEN>
-```
+    The application uses an SQLite database. The `main.py` file contains the database initialization logic.  No specific setup required; it will be created automatically.
 
-Get token here → [https://dashboard.ngrok.com/get-started/setup](https://dashboard.ngrok.com/get-started/setup)
+5.  **Configure the application:**
 
----
+    Adjust the settings in `main.py` to suit your needs. This includes setting the secret key, allowed file extensions, etc.
 
-## 🚀 Getting Started
+6.  **Run the application:**
 
-### ⏯️ Start Server
+    ```bash
+    python main.py
+    ```
 
-```bash
-chmod +x start.sh
-./start.sh
-```
+7.  **Access the chat:**
 
-Outputs:
-```
-✅ Public WebSocket URL: wss://yourid.ngrok-free.app
-```
+    Open your web browser and navigate to `http://127.0.0.1:5000/` (or the address shown in the terminal output).
 
----
+## 💻 Usage Examples & API Documentation
 
-### 💬 Run Clients (Other terminal/device)
+### Example Usage
 
-```bash
-python client_ws_aerov10.py
-```
+1.  **Register a new user:**
+    *   Navigate to the registration page.
+    *   Enter a username and password.
 
-Prompt:
-```
-🌐 WebSocket URL: wss://yourid.ngrok-free.app
-🤖 Nickname: yourname
-```
+2.  **Log in:**
+    *   Use your registered credentials to log in.
 
----
+3.  **Start chatting:**
+    *   Type your message in the input field and press Enter to send.
 
-## 💡 Example Commands
+4.  **Use commands:**
+    *   Explore available commands within the chat interface (e.g., for playing music).
 
-| Type         | Command / Plugin           | Example                        |
-|--------------|----------------------------|--------------------------------|
-| Chat Message | -                          | Hello World                    |
-| Music        | `!play hello`              | Play YouTube audio             |
-| Radio        | `!stations`, `!playstation 1` | Listen to SomaFM, etc.         |
-| Tasks        | `/newwork ...`, `/work`    | Add/show/remove todos          |
-| Admin        | `/mute`, `/ban`, `/kick`   | Requires admin IP              |
-| Plugins      | `!ascii`, `!joke`, `!guess`| Fun commands                   |
-| Theme        | `/color red`               | Change name color              |
+### API Documentation (Sockets)
 
----
+The application uses Socket.IO for real-time communication. Here's a brief overview:
 
-## 📂 Folder Structure
+*   `connect`: Event emitted when a client connects.
+*   `disconnect`: Event emitted when a client disconnects.
+*   `message`: Event for sending and receiving chat messages.
+*   `join`: Event for joining a specific chat room.
+*   `leave`: Event for leaving a chat room.
 
-```txt
-AERO-V10/
-├── server_ws_aerov10.py      # WebSocket server logic
-├── client_ws_aerov10.py      # Terminal client interface
-├── start.sh                  # ngrok-integrated launcher
-├── ngrok                     # Binary
-├── server_data.json          # Auto-generated persistent data
-├── docs/                     # Screenshots, GIFs
-│   ├── server_ui.png
-│   └── client_ui.png
-└── README.md                 # You're here
-```
-## Star History
+## ⚙️ Configuration Options
 
+You can configure the following aspects of the application:
+
+*   **`SECRET_KEY`:**  A secret key for securing the session.  Set this in `main.py`.
+*   **`UPLOAD_FOLDER`:**  The directory for storing uploaded files (avatars, etc.).
+*   **`ALLOWED_EXTENSIONS`:**  A list of allowed file extensions for uploads.
+*   **Database:**  The database connection can be modified in the `main.py` file if you want to use a different database.
+
+## 🤝 Contributing Guidelines
+
+We welcome contributions from the community! Here's how you can contribute:
+
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Implement your changes.
+4.  Test your changes thoroughly.
+5.  Submit a pull request with a clear description of your changes.
+
+## 📜 License Information
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+*   The Flask framework.
+*   The Socket.IO library.
+*   The yt-dlp library.
+*   All other dependencies used in this project.
+*   
 [![Star History Chart](https://api.star-history.com/svg?repos=YOCRRZ224/AERO-V10-terminal-chat&type=Timeline)](https://www.star-history.com/#YOCRRZ224/AERO-V10-terminal-chat&Timeline&LogScale)
----
-
-## ❓ FAQ
-
-### Can I use the same phone as server + client?
-✅ Yes! Just open two Termux sessions. One runs server, one runs client.
-
-### Music isn't playing?
-Install `mpv` via Termux:
-```bash
-pkg install mpv
-```
-
-### Is it encrypted?
-Currently, no. Public WebSocket over TLS via ngrok is secure by tunnel, but not end-to-end.
-
-### How do I become admin?
-Set your IP in `FIRST_ADMIN_IP` in the server file.
-
----
-
-## 🧠 Roadmap
-
-- [ ] GUI Version (DearPyGui)
-- [ ] Encrypted Messaging (E2E)
-- [ ] Web Frontend (React + Flask WebSocket)
-- [ ] Client Themes / Skins
-- [ ] Plugin Folder Loader
-
----
-
-## 🙏 Credits
-
-**Lead Developer:** [YOCRRZ](https://github.com/YOCRRZ224)  
-**Assisted by:** [ChatGPT (OpenAI)](https://openai.com/chatgpt)
-
-> Terminal power 💻 + Music + Code = AERO-V10.
-
----
-
-## 📜 License
-
-MIT — free to modify, improve, remix, or fork!  
-Please give credits when sharing 
