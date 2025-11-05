@@ -1,0 +1,1545 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AERO-V10</title>
+  <link rel="manifest" href="static/manifest.json">
+
+<!-- PWA Icons -->
+<link rel="apple-touch-icon" href="assets/logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+      <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+<meta property="og:image" content="static/assets/banner.png" />
+
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css"
+    />
+<link rel="icon" type="image/x-icon" href="static/assets/logo.png">
+  <style>
+    *{
+        font-family: "Source Code Pro", sans-serif;
+    }
+    :root{
+      --bg:#0a0c12;
+      --panel: rgba(255,255,255,0.04);
+      --accent: #00ffaa;
+      --muted:#8b9db0;
+      --glass-blur: blur(8px);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Inter, ui-sans-serif, system-ui, monospace;color:#e6eef6;height:100vh;display:flex;overflow:hidden;}
+    #menuBtn { position:fixed; left:12px; top:12px; z-index:40; background:rgba(255,255,255,0.06); padding:8px 10px; border-radius:8px; cursor:pointer;}
+    #sidebar { position:fixed; left:0; top:0; bottom:0; width:260px; background:var(--panel); padding:18px; transform:translateX(-280px); transition:transform .28s; backdrop-filter: var(--glass-blur); z-index:30;}
+    #sidebar.show { transform:translateX(0); }
+    #sidebar h2{ margin:0 0 12px 0; color:var(--accent); font-family:"Audiowide", sans-serif; }
+    .side-btn{ display:block;padding:10px;border-radius:8px;border:none;background:transparent;color:inherit;text-align:left;margin:6px 0;cursor:pointer;}
+    .side-btn:hover{ background:rgba(0,0,0,0.15);}
+    #main { flex:1; margin-left:0; transition:margin-left .28s; display:flex; flex-direction:column; width:100%;}
+    #sidebar.show ~ #main { margin-left:260px; }
+    header{ height:64px; display:flex; align-items:center; padding:12px 18px; border-bottom:1px solid rgba(255,255,255,0.03); justify-content:space-between;}
+    header h1{ margin:0; font-size:18px; color:var(--accent); margin-left:10px; padding:25px; font-family:"Audiowide", sans-serif;}
+    header .info{ color:var(--muted); font-size:13px; }
+    #content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+  flex-wrap: nowrap; /* prevent wrap, keeps layout stable */
+  height: calc(100vh - 64px); /* full height minus header */
+}
+    #right { width: 380px; max-width: 100%; min-width: 260px; background: var(--panel); padding: 12px; border-radius: 12px; overflow: auto; backdrop-filter: var(--glass-blur); }
+    #left {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden; /* contain inner scroll instead */
+}
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-280px); position: fixed; z-index: 50; }
+      #sidebar.show { transform: translateX(0); }
+      #main { margin-left: 0; }
+      #right { width: 100%; max-width: 100%; min-width: auto; margin-top: 12px; }
+    }
+    #messages {
+  flex: 1;
+  overflow-y: auto; /* ✅ main scroll container */
+  padding: 12px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));
+  border: 1px solid rgba(255,255,255,0.02);
+  scroll-behavior: smooth; /* nice scroll animation */
+}
+    .msg{ margin:8px 0; }
+    .msg .who{ font-weight:700; margin-right:8px; }
+    .sys{ color:var(--muted); font-size:13px; margin:8px 0; }
+    #compose {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,0.03);
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+  margin-bottom: 55px;
+
+  /* important part */
+  flex-wrap: nowrap;     /* keep all inline */
+  overflow: hidden;      /* stop overflow */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#compose > * {
+  flex-shrink: 1;   /* allow shrinking */
+  min-width: 0;     /* fix input/button overflow */
+}
+    #compose input{ flex:1; padding:10px; border-radius:8px; border:none; background:rgba(255,255,255,0.03); color:inherit; }
+    #compose button{ padding:10px 14px; border-radius:8px; border:none; background:var(--accent); color:#002020; font-weight:700; cursor:pointer; }
+    .panel-title{ font-size:14px; color:var(--muted); margin-bottom:8px;}
+    .list{ list-style:none; padding:0; margin:0; }
+    .list li{ padding:8px 6px; border-radius:8px; margin:6px 0; background:rgba(0,0,0,0.12); display:flex; justify-content:space-between; align-items:center;}
+    .small-btn{ padding:6px 8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); cursor:pointer;}
+    input[type="color"]{ border:none; background:transparent; width:44px; height:36px; padding:0; margin-left:8px; vertical-align:middle; }
+    textarea{ background: rgba(255,255,255,0.02); color:inherit; border-radius:8px; padding:8px; border:none; width:100%; }
+    a.file-link{ color:var(--accent); text-decoration: none; font-weight:700; }
+    #searchResults { max-height: 220px; overflow:auto; margin-top:8px; }
+    .search-item { display:flex; gap:8px; padding:8px; border-radius:8px; align-items:center; cursor:pointer; }
+    .search-item:hover{ background: rgba(255,255,255,0.02); }
+    .avatar-sm{ width:40px;height:40px;border-radius:8px;background:linear-gradient(45deg,var(--accent),#0077ff);display:inline-block;object-fit:cover; }
+    .profile-pic-large{ width:120px;height:120px;border-radius:12px;background:linear-gradient(45deg,var(--accent),#0077ff);object-fit:cover; display:block; }
+    .msg img {
+  display: block;
+  margin-top: 4px;
+  margin-left: 12px;
+  max-width: 140px;
+  height: auto;
+  border-radius: 10px;
+}
+/* PROFILE LINKS — STACKED */
+#linksContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* each link row becomes a vertical card */
+.link-item {
+  display: block;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.03);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+/* inputs full width */
+.link-item .link-name,
+.link-item .link-url {
+  display: block;
+  width: 100%;
+  min-width: 0; /* prevents overflow in flex parents */
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.03);
+  color: inherit;
+  box-sizing: border-box;
+}
+
+/* remove button on the right, small */
+.link-item .remove-link {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,0,0,0.08);
+  color: #ff7777;
+  cursor: pointer;
+}
+
+/* small screens: keep stacked but tighter */
+@media (max-width: 600px) {
+  .link-item { padding: 8px; }
+  .link-item .link-name, .link-item .link-url { padding: 6px; }
+}
+.profile-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s, transform 0.1s;
+}
+.profile-link-btn:hover {
+  background: rgba(255,255,255,0.06);
+  transform: translateY(-1px);
+}
+.profile-link-btn i {
+  font-size: 16px;
+  color: var(--accent);
+}
+#avatarPreview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.dm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 0;
+  margin-top: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 0.95em;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+}
+
+.dm-btn i {
+  font-size: 1.1em;
+  color: #00ffaa;
+  transition: transform 0.25s ease;
+}
+
+.dm-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #00ffaa;
+  color: #00ffaa;
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(0, 255, 170, 0.25);
+}
+
+.dm-btn:hover i {
+  transform: translateX(3px); /* small tilt motion */
+}
+.gray{
+    color: gray;
+    font-size: 0.8rem;
+}
+
+
+@media (max-width: 480px) {
+  .dm-btn {
+    padding: 12px;
+    font-size: 1em;
+  }
+}
+.bu{
+    padding:6px 8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); cursor:pointer;
+}
+.time {
+  color: #888;
+  font-size: 0.85em;
+  margin-left: 4px;
+  user-select: none;
+}
+.mention-tag {
+  color: #00ffaa;
+  font-weight: 600;
+}
+.msg.mention {
+  background: rgba(0,255,170,0.08);
+  border-left: 3px solid #00ffaa;
+  padding-left: 6px;
+  border-radius: 6px;
+}
+.link-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-top: 6px;
+  padding: 8px;
+  font-size: 0.9em;
+}
+.link-card img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.link-card .meta span {
+  color: #aaa;
+  font-size: 0.8em;
+}
+.aero-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.aero-player .player-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.aero-player button {
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  padding: 8px;
+  color: #00ffaa;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.aero-player button:hover {
+  transform: scale(1.1);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.progress {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #00ffaa, #00ccff);
+  transition: width 0.2s linear;
+}
+
+.time-info {
+  font-size: 0.8em;
+  color: #aaa;
+  margin-top: 6px;
+}
+i{
+    vertical-align: middle;
+}
+#npTitle{
+    font-family: "Audiowide", Sans-Serif;
+}
+  </style>
+</head>
+<body>
+  <div id="menuBtn"><i class="ph ph-list"></i></div>
+
+  <nav id="sidebar">
+    <h2><i class="ph ph-lightning"></i> AERO-V10</h2>
+    <input id="userSearch" placeholder="Search users..." style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);color:inherit;">
+    <div id="searchResults"></div>
+
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:10px 0;">
+    <button class="side-btn" onclick="showPanel('chat')"><i class="ph ph-chat-circle"></i> Chat Room</button>
+    <button class="side-btn" onclick="showPanel('account')"><i class="ph ph-user"></i> Account</button>
+    <button class="side-btn" onclick="showPanel('notes')"><i class="ph ph-note-pencil"></i> Notes</button>
+    <button class="side-btn" onclick="showPanel('work')"><i class="ph ph-desk"></i> Work Tracker</button>
+    <button class="side-btn" onclick="showPanel('music')"><i class="ph ph-music-notes"></i> Music</button>
+    <button class="side-btn" onclick="showPanel('files')"><i class="ph ph-file-arrow-down"></i> File Sharing</button>
+    <button class="side-btn" onclick="showPanel('dm')"><i class="ph ph-envelope"></i> DM (expermental)</button>
+    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:10px 0;">
+    <div style="font-size:13px;color:var(--muted)">Logged in as</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+      <div id="avatarPreview" style="width:44px;height:44px;border-radius:8px;background:linear-gradient(45deg,var(--accent),#0077ff)"></div>
+      <div>
+        <div id="meName" style="font-weight:700"></div>
+        <div style="font-size:12px;color:var(--muted)"><a href="/logout" style="color:var(--muted);text-decoration:none">Logout <i class="ph ph-sign-out"></i></a></div>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <header>
+      <h1>AERO-V10</h1>
+      <div class="info" id="headerInfo">Global • Online</div>
+    </header>
+
+    <section id="content">
+      <!-- LEFT: chat -->
+      <!-- LEFT: chat -->
+<div id="left" class="panel" data-panel="chat">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;">
+          <div style="font-size:13px;color:var(--muted)">Home • Chat</div>
+        </div>
+        <div id="messages"></div>
+        <div id="compose">
+          <input id="chatInput" placeholder="Say something or /command..." autocomplete="off" type="text">
+          <button id="stickerBtn" class="small-btn"><i class="ph ph-sticker"></i></button>
+          <div id="stickerPopup" style="
+  display:none; position:fixed; bottom:90px; right:80px;
+  width:300px; height:220px; background:rgba(255,255,255,0.04);
+  border-radius:12px; backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 0 25px rgba(0,255,170,0.15);
+  padding:10px; overflow:auto; z-index:999;
+">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-weight:700;color:var(--accent)">Stickers</div>
+    <button id="closeSticker" class="small-btn">✕</button>
+  </div>
+  <div id="stickerGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+  <div style="margin-top:10px;text-align:center;">
+    <input type="file" id="addStickerInput" accept="image/png,image/gif" style="display:none;">
+    <button id="addStickerBtn" class="small-btn"><i class="ph ph-plus"></i></button>
+  </div>
+</div>
+<button id="uploadBtn" class="small-btn"><i class="ph ph-plus"></i></button>
+          <button id="sendBtn"><i class="ph ph-paper-plane-right"></i></button>
+        </div>
+      </div>
+
+      <!-- RIGHT: dynamic panel -->
+      <aside id="right">
+        <!-- Profile View Panel (public) -->
+        <div id="panel-profile" class="panel" style="display:none;">
+          <div class="panel-title"><i class="ph ph-user"></i> Profile</div>
+          <div id="profileView">
+            <!-- filled dynamically -->
+          </div>
+        </div>
+
+        <!-- Music Panel -->
+       <div id="panel-music" class="panel" style="display:none;">
+          <div class="panel-title"> Music Room</div>
+          <div style="display:flex;gap:8px;">
+            <input id="musicQuery" placeholder="Search YouTube or paste URL" style="flex:1;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02) color:white;">
+            <button class="small-btn" onclick="playMusic()">Play</button>
+            <button class="small-btn" onclick="skipMusic()">Skip</button>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Now Playing</div>
+            <div id="nowPlaying" style="padding:10px;border-radius:8px;background:rgba(0,0,0,0.12);min-height:56px">
+              <div id="npTitle" style="font-weight:700;color:var(--accent)">Nothing</div>
+              <div id="npBy" style="font-size:13px;color:var(--muted)"></div>
+              <div id="aeroPlayer" class="aero-player">
+  <div class="progress-bar"><div class="progress"></div></div>
+  <div class="player-controls">
+    <button id="playPauseBtn"><i class="ph ph-play"></i></button>
+    <button id="nextBtn"><i class="ph ph-skip-forward"></i></button>
+  </div>
+  <div class="time-info">
+    <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+  </div>
+</div>
+<audio id="audioPlayer" style="display:none"></audio>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Queue</div>
+            <ul id="queueList" class="list"></ul>
+          </div>
+        </div>
+
+        <!-- Account Panel -->
+        <div id="panel-account" class="panel" style="display:none;">
+          <div class="panel-title"><i class="ph ph-user"></i> Account</div>
+          <div>
+              
+            <label style="font-size:13px;color:var(--muted)">Display name</label><br>
+            
+            <input id="displayName" style="padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);width:100%"><br>
+            <div style="margin-top:8px;">
+              <label style="font-size:13px;color:var(--muted)">Color</label>
+              <input type="color" id="displayColor">
+            </div>
+            <div style="margin-top:8px;">
+              <label style="font-size:13px;color:var(--muted)">Bio</label>
+              <textarea id="displayBio" placeholder="Write a short bio..."></textarea>
+            </div>
+            <h3>🌐 Links</h3>
+<div id="linksContainer"></div>
+<button id="addLinkBtn" class="btn">+ Add Link</button>
+            <div style="margin-top:8px;">
+              <label style="font-size:13px;color:var(--muted)">Profile picture</label><br>
+              <input type="file" id="avatarInput" accept="image/*">
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+                <button class="small-btn" onclick="uploadAvatar()">Upload</button>
+                <button class="small-btn" onclick="saveProfile()">Save</button>
+              </div>
+            </div>
+            <div style="margin-top:10px;display:flex;justify-content:space-between;">
+              <button class="small-btn" style="background:rgba(255,0,0,0.06);color:#ff8080" onclick="askDelete()">Delete account</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes Panel -->
+        <div id="panel-notes" class="panel" style="display:none;">
+          <div class="panel-title"><i class="ph ph-note-pencil"></i> Notes</div>
+          <div>
+            <input id="noteTitle" placeholder="Title" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);">
+            <textarea id="noteBody" placeholder="Note body" style="width:100%;height:120px;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);margin-top:8px"></textarea>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;">
+              <button class="small-btn" onclick="saveNote()">Save Note</button>
+              <button class="small-btn" onclick="loadNotes()">Refresh</button>
+            </div>
+            <ul id="notesList" class="list" style="margin-top:12px;max-height:200px;overflow:auto"></ul>
+          </div>
+        </div>
+
+        <!-- Work panel -->
+        <div id="panel-work" class="panel" style="display:none;">
+          <div class="panel-title"> <i class="ph ph-desk"></i> Work Tracker</div>
+          <div>
+            <input id="workTitle" placeholder="New work item" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);">
+            <div style="display:flex;justify-content:flex-end;margin-top:8px;"><button class="small-btn" onclick="addWork()">Add</button></div>
+            <ul id="workList" class="list" style="margin-top:12px;max-height:320px;overflow:auto"></ul>
+          </div>
+        </div>
+
+        <!-- File Sharing Panel -->
+        <div id="panel-files" class="panel" style="display:none;">
+          <div class="panel-title"> <i class="ph ph-file-arrow-down"></i> File Sharing</div>
+          <div style="margin-bottom:8px;">
+            <input type="file" id="fileInput" style="width:100%;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.02)">
+            <button class="small-btn" onclick="sendFile()" style="margin-top:6px;width:100%;"> Upload File</button>
+          </div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">Shared Files</div>
+          <ul id="filesList" class="list" style="max-height:300px;overflow:auto;"></ul>
+        </div>
+        <!-- Direct Messages Panel -->
+<div id="panel-dm" class="panel" style="display:none;">
+  <div class="panel-title"><i class="ph ph-paper-plane-tilt"></i> Direct Messages</div>
+
+  <!-- DM Connections -->
+  <div id="dm-list" style="max-height:180px;overflow:auto;margin-bottom:8px;">
+    <div style="font-size:13px;color:var(--muted)">No DMs yet</div>
+  </div>
+
+  <!-- DM Chat Area -->
+  <div id="dm-chat" style="display:none;">
+    <div id="dm-header" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <button class="small-btn" id="dmBackBtn"><i class="ph ph-arrow-fat-line-left"></i></button>
+      <img id="dmUserPic" src="" alt="avatar" width="36" height="36" style="border-radius:8px;object-fit:cover;">
+      <strong id="dmUserName" style="font-size:14px;"></strong>
+    </div>
+
+    <div id="dmMessages" style="height:220px;overflow:auto;background:rgba(255,255,255,0.02);border-radius:8px;padding:8px;margin-bottom:8px;"></div>
+
+    <div style="display:flex;gap:8px;">
+      <input id="dmInput" type="text" placeholder="Type a message..." style="flex:1;padding:8px;border-radius:8px;border:none;background:rgba(255,255,255,0.03);color:inherit;">
+      <button class="small-btn" id="dmSendBtn"><i class="ph ph-paper-plane-right"></i></button>
+    </div>
+  </div>
+</div>
+      </aside>
+    </section>
+  </main>
+
+<script>
+  const socket = io();
+  const username = "{{ username|e }}";
+  const myColor = "{{ color|e }}";
+  const myDisplay = "{{ display|e }}";
+
+  // DOM refs
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const meName = document.getElementById('meName');
+  const messages = document.getElementById('messages');
+  const sendBtn = document.getElementById('sendBtn');
+  const chatInput = document.getElementById('chatInput');
+  const avatarPreview = document.getElementById('avatarPreview');
+  const searchInput = document.getElementById('userSearch');
+  const searchResults = document.getElementById('searchResults');
+
+  const name = myDisplay || username || 'User';
+  const color = myColor || '#00ffaa';
+// --- Links dynamic UI ---
+
+
+// --- Load current user data ---
+async function loadProfile() {
+  const res = await fetch('/_whoami');
+  const data = await res.json();
+
+  document.getElementById('displayName').value = data.display || '';
+  document.getElementById('displayColor').value = data.color || '#00ffaa';
+  document.getElementById('displayBio').value = data.bio || '';
+
+  // populate links
+  
+}
+
+// --- Save profile (with links) ---
+async function saveProfile() {
+  const display = document.getElementById('displayName').value.trim();
+  const color = document.getElementById('displayColor').value;
+  const bio = document.getElementById('displayBio').value.trim();
+
+  // collect all link fields
+
+  const res = await fetch('/profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ display, color, bio, links })
+  });
+
+  const data = await res.json();
+  if (data.ok) {
+    alert('Profile updated!');
+  } else {
+    alert('Error: ' + (data.error || 'unknown'));
+  }
+}
+  // Panels
+  const panels = {
+  profile: document.getElementById('panel-profile'),
+  music: document.getElementById('panel-music'),
+  account: document.getElementById('panel-account'),
+  notes: document.getElementById('panel-notes'),
+  work: document.getElementById('panel-work'),
+  files: document.getElementById('panel-files'),
+  dm: document.getElementById('panel-dm')   // ✅ added for Direct Messages
+};
+
+  // Initial UI
+  meName.innerText = myDisplay || username;
+  document.getElementById('displayName').value = myDisplay || username;
+  document.getElementById('displayColor').value = myColor || '#00ffaa';
+  avatarPreview.style.background = `linear-gradient(45deg, ${document.getElementById('displayColor').value}, #0077ff)`;
+
+  // Menu toggle
+  menuBtn.onclick = () => sidebar.classList.toggle('show');
+
+  // Panel switcher
+  function showPanel(name){
+  // Hide all right-side panels
+  Object.values(panels).forEach(p => p.style.display = 'none');
+
+  // Show chat only when "chat" is active
+  const chatPanel = document.getElementById('left');
+  if(name === 'chat' || !name){
+    chatPanel.style.display = 'flex';
+  } else {
+    chatPanel.style.display = 'none';
+  }
+
+  // Show right panel content if applicable
+  if(name && panels[name]) {
+    panels[name].style.display = 'block';
+    document.getElementById('right').style.display = 'block';
+  } else {
+    document.getElementById('right').style.display = 'none';
+  }
+
+  sidebar.classList.remove('show');
+}
+showPanel('chat'); // start in chat mode
+  // Chat logic
+  sendBtn.onclick = sendChat;
+  chatInput.addEventListener('keypress', e => { if(e.key==='Enter') sendChat(); });
+  function sendChat(){
+    const text = chatInput.value.trim();
+    if(!text) return;
+    socket.emit('send_chat', {text});
+    chatInput.value = '';
+  }
+
+  socket.on('chat_history', arr => {
+    messages.innerHTML = '';
+    arr.forEach(addMessage);
+    messages.scrollTop = messages.scrollHeight;
+  });
+  socket.on('chat_message', addMessage);
+  socket.on('system', s => {
+    const div = document.createElement('div');
+    div.className = 'sys';
+    div.innerText = `[${s.time}] ${s.msg}`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  // single addMessage implementation
+  function addMessage(msg) {
+  const d = document.createElement('div');
+  d.className = 'msg';
+
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.innerText = msg.user + ': ';
+  who.style.color = msg.color || '#fff';
+
+  const txt = document.createElement('span');
+
+  // ========== Handle HTML messages (stickers, etc.) ==========
+  if (msg.is_html) {
+    txt.innerHTML = '<br>' + msg.msg;
+
+    const anchors = txt.querySelectorAll('a');
+    anchors.forEach(a => a.classList.add('file-link'));
+
+    const imgs = txt.querySelectorAll('img');
+    imgs.forEach(img => {
+      img.style.width = '120px';
+      img.style.height = 'auto';
+      img.style.borderRadius = '10px';
+      img.style.marginTop = '6px';
+      img.style.display = 'block';
+      img.style.transition = 'transform 0.2s ease';
+      img.onmouseover = () => (img.style.transform = 'scale(1.1)');
+      img.onmouseout = () => (img.style.transform = 'scale(1)');
+    });
+  } else {
+    // ========== Normal text messages ==========
+    const myName = window.myUsername || '';
+    let text = msg.msg || '';
+
+    // Convert URLs to clickable links first
+    text = text.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" class="file-link">$1</a>'
+    );
+
+    // Highlight mentions
+    text = text.replace(/(@\w+)/g, '<span class="mention-tag">$1</span>');
+
+    txt.innerHTML = text;
+
+    // Highlight your mentions
+    if (myName && new RegExp(`@${myName}\\b`, 'i').test(msg.msg)) {
+      d.classList.add('mention');
+    }
+  }
+
+  // ========== Timestamp ==========
+  const ts = document.createElement('span');
+  ts.className = 'time';
+  ts.textContent = msg.time ? ` [${msg.time}]` : '';
+
+  // ========== Append message first ==========
+  d.appendChild(who);
+  d.appendChild(txt);
+  d.appendChild(ts);
+  messages.appendChild(d);
+
+  // ========== Smart link preview AFTER rendering ==========
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  const found = msg.msg.match(urlPattern);
+  if (found) {
+    found.forEach(url => {
+      fetch(`/link_preview?url=${encodeURIComponent(url)}`)
+        .then(r => r.json())
+        .then(meta => {
+          if (!meta || !meta.title) return;
+          const card = document.createElement('div');
+          card.className = 'link-card';
+          card.innerHTML = `
+            ${meta.image ? `<img src="${meta.image}" alt="">` : ''}
+            <div class="meta">
+              <strong>${meta.title}</strong><br>
+              <span>${meta.desc || ''}</span>
+            </div>
+          `;
+          txt.appendChild(card);
+        })
+        .catch(() => {});
+    });
+  }
+
+  // ========== Auto-scroll ==========
+  setTimeout(() => {
+    messages.scrollTop = messages.scrollHeight;
+  }, 100);
+}
+  // MUSIC
+  
+
+  // PROFILE saving & avatar upload & delete account
+  function saveProfile(){
+  const display = document.getElementById('displayName').value;
+  const color = document.getElementById('displayColor').value;
+  const bio = document.getElementById('displayBio').value;
+  const meName = document.getElementById('meName');
+  const avatarPreview = document.getElementById('avatarPreview');
+
+  fetch('/profile', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({display, color, bio})
+  })
+  .then(r=>r.json())
+  .then(j=>{
+    if(j.ok){
+      if (meName) meName.innerText = j.display || display;
+      if (avatarPreview) avatarPreview.style.background =
+        `linear-gradient(45deg, ${j.color || color}, #0077ff)`;
+      alert('Profile saved');
+    } else alert('Save failed');
+  })
+  .catch(e => alert('Error saving profile: ' + e.message));
+}
+
+function uploadAvatar(){
+  const input = document.getElementById('avatarInput');
+  const avatarPreview = document.getElementById('avatarPreview');
+  if(!input.files.length) return alert('Pick an image');
+
+  const f = input.files[0];
+  const fd = new FormData();
+  fd.append('file', f);
+
+  fetch('/upload_profile_pic', {method:'POST', body: fd})
+    .then(r=>r.json())
+    .then(j=>{
+      if(j.ok){
+        if (avatarPreview)
+          avatarPreview.style.background = `url(${j.profile_pic}?v=${Date.now()}) center/cover`;
+        alert('Avatar uploaded');
+      } else alert('Upload failed: ' + (j.error || 'unknown'));
+    })
+    .catch(e => alert('Error uploading avatar: ' + e.message));
+}
+
+  function askDelete(){
+    if(!confirm('Delete your account and all your notes/work/uploads? This cannot be undone.')) return;
+    fetch('/delete_account', {method:'POST'}).then(r=>r.json()).then(j=>{
+      if(j.ok){
+        alert('Account deleted. Logging out.');
+        window.location.href = '/';
+      } else {
+        alert('Failed to delete account');
+      }
+    });
+  }
+
+  // load profile on startup
+  function loadProfile() {
+  fetch('/_whoami')
+    .then(r => r.json())
+    .then(u => {
+      if (!u || !u.username) return;
+
+      // Elements (get them here to avoid accidental globals)
+      const meNameEl = document.getElementById('meName');
+      const displayNameEl = document.getElementById('displayName');
+      const displayColorEl = document.getElementById('displayColor');
+      const displayBioEl = document.getElementById('displayBio');
+      const avatarPreview = document.getElementById('avatarPreview');
+
+      // Make sure elements exist
+      if (displayNameEl) displayNameEl.value = u.display || u.username;
+      if (displayColorEl) displayColorEl.value = u.color || '#00ffaa';
+      if (displayBioEl) displayBioEl.value = u.bio || '';
+      if (meNameEl) meNameEl.innerText = u.display || u.username;
+
+      // Avatar preview base CSS
+      if (avatarPreview) {
+        avatarPreview.style.background = ''; // reset
+        avatarPreview.style.backgroundSize = 'cover';
+        avatarPreview.style.backgroundPosition = 'center';
+        avatarPreview.style.backgroundRepeat = 'no-repeat';
+
+        if (u.profile_pic && u.profile_pic.trim() !== '') {
+          // Preload image to detect load/404
+          const img = new Image();
+          img.onload = () => {
+            // Put gradient on top and image behind it
+            avatarPreview.style.background = `
+              linear-gradient(45deg, ${u.color || '#00ffaa'}, #0077ff),
+              url('${u.profile_pic}')
+            `;
+          };
+          img.onerror = () => {
+            console.warn('Image failed to load:', u.profile_pic);
+            avatarPreview.style.background = `linear-gradient(45deg, ${u.color || '#00ffaa'}, #0077ff)`;
+          };
+
+          // Optional: add cache-buster during development if browser caches a broken image
+          // img.src = u.profile_pic + '?v=' + Date.now();
+          img.src = u.profile_pic;
+        } else {
+          // fallback gradient only
+          avatarPreview.style.background = `linear-gradient(45deg, ${u.color || '#00ffaa'}, #0077ff)`;
+        }
+      }
+    })
+    .catch(err => console.error('Profile load failed:', err));
+}
+
+// call once (outside of function)
+loadProfile();
+  // NOTES
+  function loadNotes(){
+    fetch('/notes').then(r=>r.json()).then(arr=>{
+      const list = document.getElementById('notesList'); list.innerHTML = '';
+      (arr||[]).forEach(n=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<div style="flex:1"><strong>${n.title}</strong><div style="font-size:12px;color:var(--muted)">${new Date(n.created).toLocaleString()}</div></div>
+                        <div style="margin-left:8px"><button class="small-btn" onclick="deleteNote(${n.id})">del</button></div>`;
+        list.appendChild(li);
+      });
+    });
+  }
+  function saveNote(){
+    const title = document.getElementById('noteTitle').value;
+    const body = document.getElementById('noteBody').value;
+    fetch('/notes', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title, body})})
+      .then(()=>{ document.getElementById('noteTitle').value=''; document.getElementById('noteBody').value=''; loadNotes(); });
+  }
+  function deleteNote(id){
+    fetch('/notes', {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})})
+      .then(()=>loadNotes());
+  }
+
+  // WORK
+  function loadWorks(){
+    fetch('/work').then(r=>r.json()).then(arr=>{
+      const list = document.getElementById('workList'); list.innerHTML='';
+      (arr||[]).forEach(w=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<div style="flex:1"><strong>${w.title}</strong><div style="font-size:12px;color:var(--muted)">${w.status}</div></div>
+                        <div style="margin-left:8px">
+                          <button class="small-btn" onclick="toggleWork(${w.id},'done')">done</button>
+                          <button class="small-btn" onclick="deleteWork(${w.id})">del</button>
+                        </div>`;
+        list.appendChild(li);
+      });
+    });
+  }
+  function addWork(){
+    const title = document.getElementById('workTitle').value.trim();
+    if(!title) return;
+    fetch('/work', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title})}).then(()=>{ document.getElementById('workTitle').value=''; loadWorks(); });
+  }
+  function deleteWork(id){
+    fetch('/work', {method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id})}).then(()=>loadWorks());
+  }
+  function toggleWork(id, status){
+    fetch('/work', {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, status})}).then(()=>loadWorks());
+  }
+
+  // File upload + listing
+  function sendFile(){
+    const input = document.getElementById('fileInput');
+    if(!input.files.length) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/upload', {method:'POST', body: formData})
+      .then(r=>r.json())
+      .then(j=>{
+        if(j.ok){
+          input.value='';
+          loadFiles();
+        } else alert('Upload failed: '+(j.error||'unknown'));
+      });
+  }
+  function loadFiles(){
+    fetch('/uploads').then(r=>r.json()).then(arr=>{
+      const list = document.getElementById('filesList'); list.innerHTML='';
+      (arr||[]).forEach(f=>{
+        const li = document.createElement('li');
+        const safe = encodeURIComponent(f);
+        li.innerHTML = `<a href="/uploads/${safe}" download class="file-link">${f.replace(/^.*?_/,'')}</a>`;
+        list.appendChild(li);
+      });
+    });
+  }
+  loadFiles();
+
+  // SEARCH users
+  let searchTimer = null;
+
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (!q) {
+    searchResults.innerHTML = '';
+    return;
+  }
+
+  searchTimer = setTimeout(() => {
+    fetch('/search_users?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(arr => {
+        searchResults.innerHTML = '';
+
+        (arr || []).forEach(u => {
+          // ✅ Ensure correct avatar path
+          let avatar = '/static/default.png';
+          if (u.profile_pic) {
+            // handle either relative or full path safely
+            avatar = u.profile_pic.startsWith('/uploads/')
+              ? u.profile_pic
+              : '/uploads/avatars/' + u.profile_pic;
+          }
+
+          const div = document.createElement('div');
+          div.className = 'search-item';
+          div.innerHTML = `
+            <img class="avatar-sm"
+                 src="${avatar}"
+                 onerror="this.src='/static/default.png'; this.style.background='linear-gradient(45deg,var(--accent),#0077ff)'">
+            <div style="flex:1">
+              <strong>${u.display || u.username}</strong>
+              <div style="font-size:12px;color:var(--muted)">${u.username}</div>
+            </div>
+          `;
+
+          div.onclick = () => openProfile(u.username);
+          searchResults.appendChild(div);
+        });
+      });
+  }, 240);
+});
+  
+
+// =============== DM SYSTEM ===================
+const dmList = document.getElementById('dm-list');
+const dmChat = document.getElementById('dm-chat');
+const dmMessages = document.getElementById('dmMessages');
+const dmUserName = document.getElementById('dmUserName');
+const dmUserPic = document.getElementById('dmUserPic');
+const dmInput = document.getElementById('dmInput');
+const dmSendBtn = document.getElementById('dmSendBtn');
+const dmBackBtn = document.getElementById('dmBackBtn');
+let currentDM = null;
+
+// --- BACK BUTTON ---
+dmBackBtn.onclick = () => {
+  dmChat.style.display = 'none';
+  dmList.style.display = 'block';
+  currentDM = null;
+};
+
+// --- LOAD DM LIST ---
+async function loadDMList() {
+  const res = await fetch('/dm/list');
+  if (!res.ok) return;
+  const users = await res.json();
+  dmList.innerHTML = '';
+
+  if (!users.length) {
+    dmList.innerHTML = `<div style="font-size:13px;color:var(--muted)">No conversations yet</div>`;
+    return;
+  }
+
+  users.forEach(u => {
+    const row = document.createElement('div');
+    row.className = 'search-item';
+    const pic = u.profile_pic ? `/avatars/${u.profile_pic}` : '/static/default.png';
+    row.innerHTML = `
+      <img class="avatar-sm" src="${pic}" onerror="this.src='/static/default.png'">
+      <div style="flex:1">
+        <strong>${u.display || u.username}</strong>
+        <div style="font-size:12px;color:var(--muted)">${u.username}</div>
+      </div>
+    `;
+    row.onclick = () => openDM(u);
+    dmList.appendChild(row);
+  });
+}
+
+// --- OPEN DM CHAT ---
+async function openDM(u) {
+  currentDM = u.username;
+  dmUserName.textContent = u.display || u.username;
+  dmUserPic.src = u.profile_pic ? `/avatars/${u.profile_pic}` : '/static/default.png';
+
+  dmList.style.display = 'none';
+  dmChat.style.display = 'block';
+  await loadDMHistory(u.username);
+}
+
+// --- LOAD DM HISTORY ---
+async function loadDMHistory(username) {
+  const res = await fetch('/dm/history/' + encodeURIComponent(username));
+  if (!res.ok) return;
+  const msgs = await res.json();
+
+  dmMessages.innerHTML = '';
+  msgs.forEach(m => addDMMessage({
+    from: m.sender_name || username,
+    msg: m.msg,
+    time: new Date(m.time).toLocaleTimeString(),
+    pic: m.sender_pic ? `/avatars/${m.sender_pic}` : '/static/default.png'
+  }));
+}
+
+// --- RENDER A MESSAGE ---
+function addDMMessage(m) {
+  const div = document.createElement('div');
+  div.style.marginBottom = '6px';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <img src="${m.pic}" width="26" height="26" style="border-radius:6px;object-fit:cover;background:rgba(255,255,255,0.05)">
+      <strong style="color:var(--accent);font-size:13px;">${m.from}</strong>
+      <span style="font-size:11px;color:var(--muted)">${m.time}</span>
+    </div>
+    <div style="margin-left:32px;margin-top:2px;">${m.msg}</div>
+  `;
+  dmMessages.appendChild(div);
+  dmMessages.scrollTop = dmMessages.scrollHeight;
+}
+
+// --- SEND DM MESSAGE ---
+dmSendBtn.onclick = sendDM;
+dmInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendDM(); });
+
+function sendDM() {
+  const msg = dmInput.value.trim();
+  if (!msg || !currentDM) return;
+  dmInput.value = '';
+
+  // instant preview
+  addDMMessage({
+  from: 'You',
+  msg,
+  time: new Date().toLocaleTimeString(),
+  pic: window.myProfile?.profile_pic ? `/avatars/${window.myProfile.profile_pic}` : '/static/default.png'
+});
+
+  socket.emit('send_dm', { to: currentDM, msg });
+}
+
+socket.on("dm_message", (m) => {
+  if (currentDM === m.from || currentDM === m.to) {
+    addDMMessage({
+      from: m.from === username ? "You" : m.from,
+      msg: m.msg,
+      time: m.time,
+      pic: m.sender_pic || '/static/default.png'
+    });
+  } else {
+    console.log("New DM from", m.from);
+  }
+});
+// --- INTEGRATE WITH PANEL SYSTEM ---
+const originalShowPanel = showPanel;
+showPanel = function(name) {
+  originalShowPanel(name);
+  if (name === 'dm') loadDMList();
+};
+
+  // open profile panel
+function openProfile(usernameToOpen) {
+  fetch('/user/' + encodeURIComponent(usernameToOpen))
+    .then(r => r.json())
+    .then(u => {
+      if (u.error) { alert('Not found'); return; }
+
+      const container = document.getElementById('profileView');
+      container.innerHTML = '';
+
+      const pic = u.profile_pic
+        ? `<img class="profile-pic-large" src="${u.profile_pic}" />`
+        : `<div class="profile-pic-large"></div>`;
+
+      // --- profile header ---
+      let html = `
+        <div style="display:flex;gap:12px;align-items:center;">
+          ${pic}
+          <div>
+            <h3 style="margin:0">${u.display || u.username}</h3>
+            <div style="font-size:13px;color:var(--muted)">${u.username}</div>
+            <div style="margin-top:8px;color:var(--muted)">${u.bio || ''}</div>
+            <div style="margin-top:8px;font-size:12px;color:var(--muted)">Joined: ${new Date(u.created).toLocaleDateString()}</div>
+          </div>
+        </div>
+      `;
+
+      // --- social / custom links ---
+      if (u.links && u.links.length) {
+        html += `<div style="margin-top:14px; display:flex; flex-wrap:wrap; gap:10px;">`;
+        for (const link of u.links) {
+          const url = link.url || '';
+          const label = link.name || '';
+
+          // choose icon based on link name / domain
+          let icon = 'link';
+          const lower = url.toLowerCase();
+          if (lower.includes('github')) icon = 'github-logo';
+          else if (lower.includes('reddit')) icon = 'reddit-logo';
+          else if (lower.includes('twitter') || lower.includes('x.com')) icon = 'twitter-logo';
+          else if (lower.includes('instagram')) icon = 'instagram-logo';
+          else if (lower.includes('youtube')) icon = 'youtube-logo';
+          else if (lower.includes('tiktok')) icon = 'tiktok-logo';
+          else if (lower.includes('facebook')) icon = 'facebook-logo';
+          else if (lower.includes('linkedin')) icon = 'linkedin-logo';
+
+          html += `
+            <a href="${url}" target="_blank" class="profile-link-btn">
+              <i class="ph ph-${icon}"></i>
+              ${label || 'Link'}
+            </a>`;
+        }
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+
+      // ✅ DM button (only if not your own profile)
+      if (u.username !== window.myUsername) {
+        const msgBtn = document.createElement('button');
+        msgBtn.className = 'dm-btn';
+        msgBtn.style.marginTop = '12px';
+        msgBtn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> DM <p class="gray"> (UNSTABLE)</p>';
+        msgBtn.onclick = () => {
+          showPanel('dm');
+          openDM(u);
+        };
+        container.appendChild(msgBtn);
+      }
+
+      showPanel('profile');
+    });
+}
+
+  // initial loads
+  loadNotes();
+  loadWorks();
+
+  // try to get profile data periodically (in case routes start later)
+  setTimeout(loadProfile, 500);
+  const stickerBtn = document.getElementById('stickerBtn');
+const stickerPopup = document.getElementById('stickerPopup');
+const closeSticker = document.getElementById('closeSticker');
+const stickerGrid = document.getElementById('stickerGrid');
+const addStickerBtn = document.getElementById('addStickerBtn');
+const addStickerInput = document.getElementById('addStickerInput');
+
+stickerBtn.onclick = () => {
+  stickerPopup.style.display = 'block';
+};
+closeSticker.onclick = () => {
+  stickerPopup.style.display = 'none';
+};
+addStickerBtn.onclick = () => addStickerInput.click();
+
+addStickerInput.onchange = async () => {
+  if (!addStickerInput.files.length) return;
+  const f = addStickerInput.files[0];
+  const fd = new FormData();
+  fd.append('file', f);
+  const res = await fetch('/upload_sticker', { method: 'POST', body: fd });
+  const j = await res.json();
+  if (j.ok) {
+    loadStickers();
+  } else alert('Sticker upload failed: ' + (j.error || 'unknown'));
+};
+
+async function loadStickers() {
+  const res = await fetch('/stickers');
+  const arr = await res.json();
+  stickerGrid.innerHTML = '';
+  (arr||[]).forEach(s=>{
+    const img = document.createElement('img');
+    img.src = s.url;
+    img.style.width='60px';
+    img.style.height='60px';
+    img.style.borderRadius='8px';
+    img.style.cursor='pointer';
+    img.onclick = ()=>{
+      socket.emit('send_chat', {
+  text: `<img src='${s.url}' width='80' height='80' style='border-radius:8px;'>`,
+  html: true  // ✅ add this
+});
+      stickerPopup.style.display='none';
+    };
+    stickerGrid.appendChild(img);
+  });
+}
+loadStickers();
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInput = document.getElementById('fileInput');
+
+uploadBtn.onclick = () => fileInput.click();
+
+fileInput.onchange = async () => {
+  if (!fileInput.files.length) return;
+
+  const file = fileInput.files[0];
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert('Upload failed: ' + (data.error || 'unknown'));
+    } else {
+      console.log('File uploaded:', data.url);
+
+      // ✅ refresh your existing file list so download links appear
+      if (typeof loadFiles === 'function') {
+        loadFiles();
+      }
+
+      // ✅ also add it manually to the list (instant feedback)
+      const list = document.getElementById('filesList');
+      if (list) {
+        const li = document.createElement('li');
+        const safe = encodeURIComponent(file.name);
+        li.innerHTML = `<a href="${data.url}" download class="file-link">${file.name.replace(/^.*?_/,'')}</a>`;
+        list.prepend(li);
+      }
+    }
+  } catch (err) {
+    alert('Upload error: ' + err.message);
+  }
+
+  fileInput.value = ''; // reset input
+};
+const audio = document.getElementById('audioPlayer');
+  const npTitle = document.getElementById('npTitle');
+  const npBy = document.getElementById('npBy');
+  const queueList = document.getElementById('queueList');
+
+  async function playMusic(){
+    const q = document.getElementById('musicQuery').value.trim();
+    if(!q) return;
+    await fetch('/music/play', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({query: q})});
+    document.getElementById('musicQuery').value = '';
+  }
+  async function skipMusic(){ await fetch('/music/skip', {method:'POST'}); }
+
+  socket.on('now_playing', track => {
+    if(!track){ npTitle.innerText='Nothing'; npBy.innerText=''; audio.src=''; return; }
+    npTitle.innerText = track.title;
+    npBy.innerText = 'requested by ' + (track.requested_by || 'unknown');
+    audio.src = track.url;
+    audio.play().catch(()=>{});
+  });
+  socket.on('queue_update', queue => {
+    queueList.innerHTML = '';
+    (queue||[]).forEach(t=>{
+      const li = document.createElement('li');
+      li.innerHTML = `<div style="flex:1"><strong>${t.title}</strong><div style="font-size:12px;color:var(--muted)">by ${t.requested_by || 'unknown'}</div></div>
+                      <div style="margin-left:8px"><button class="small-btn" onclick="removeQueue(${t.id})"><i class="ph ph-fast-forward" style="color:white;"></i></button></div>`;
+      queueList.appendChild(li);
+    });
+  });
+  function removeQueue(id){ skipMusic(); }
+  audio.addEventListener('ended', ()=> fetch('/music/skip', {method:'POST'}));
+  
+  // AERO Player UI control logic
+const playPauseBtn = document.getElementById('playPauseBtn');
+const progressBar = document.querySelector('.progress-bar');
+const progress = document.querySelector('.progress');
+const currentTimeEl = document.getElementById('currentTime');
+const totalTimeEl = document.getElementById('totalTime');
+let isPlaying = false;
+
+playPauseBtn.addEventListener('click', () => {
+  if (audio.paused) {
+    audio.play();
+    playPauseBtn.innerHTML = '<i class="ph ph-pause"></i>';
+    isPlaying = true;
+  } else {
+    audio.pause();
+    playPauseBtn.innerHTML = '<i class="ph ph-play"></i>';
+    isPlaying = false;
+  }
+});
+
+audio.addEventListener('timeupdate', () => {
+  const percent = (audio.currentTime / audio.duration) * 100;
+  progress.style.width = percent + '%';
+  currentTimeEl.textContent = formatTime(audio.currentTime);
+  totalTimeEl.textContent = formatTime(audio.duration);
+});
+
+progressBar.addEventListener('click', e => {
+  const rect = progressBar.getBoundingClientRect();
+  const pos = (e.clientX - rect.left) / rect.width;
+  audio.currentTime = pos * audio.duration;
+});
+
+function formatTime(sec) {
+  if (!sec || isNaN(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+document.getElementById('nextBtn').addEventListener('click', skipMusic);
+document.getElementById('prevBtn').addEventListener('click', () => {
+  audio.currentTime = 0;
+});
+// known link icons (you can adjust Phosphor icon names)
+const linkIcons = {
+  github: 'ph-github-logo',
+  reddit: 'ph-reddit-logo',
+  twitter: 'ph-twitter-logo',
+  website: 'ph-globe',
+  portfolio: 'ph-briefcase',
+  youtube: 'ph-youtube-logo'
+};
+
+// --- build link input rows ---
+function renderLinksEditor(links) {
+  const container = document.getElementById('linksContainer');
+  container.innerHTML = '';
+  Object.entries(links || {}).forEach(([name, url]) => {
+    const div = document.createElement('div');
+    div.className = 'link-item';
+    div.innerHTML = `
+      <input type="text" class="link-name" value="${name}" placeholder="name (e.g. github)">
+      <input type="url" class="link-url" value="${url}" placeholder="https://example.com">
+      <button class="remove-link">×</button>
+    `;
+    div.querySelector('.remove-link').onclick = () => div.remove();
+    container.appendChild(div);
+  });
+}
+
+// --- add new link ---
+document.getElementById('addLinkBtn').onclick = () => {
+  const container = document.getElementById('linksContainer');
+  const div = document.createElement('div');
+  div.className = 'link-item';
+  div.innerHTML = `
+    <input type="text" class="link-name" placeholder="name (e.g. github)">
+    <input type="url" class="link-url" placeholder="https://example.com">
+    <button class="remove-link">×</button>
+  `;
+  div.querySelector('.remove-link').onclick = () => div.remove();
+  container.appendChild(div);
+};
+
+// --- load profile including links ---
+async function loadProfile() {
+  const res = await fetch('/_whoami');
+  const data = await res.json();
+  if (!data.username) return;
+
+  document.getElementById('displayName').value = data.display || '';
+  document.getElementById('displayColor').value = data.color || '#00ffaa';
+  document.getElementById('displayBio').value = data.bio || '';
+  renderLinksEditor(data.links || {});
+}
+
+// --- save profile with links ---
+async function saveProfile() {
+  const links = {};
+  document.querySelectorAll('#linksContainer .link-item').forEach(div => {
+    const name = div.querySelector('.link-name').value.trim();
+    const url = div.querySelector('.link-url').value.trim();
+    if (name && url) links[name] = url;
+  });
+
+  const body = {
+    display: document.getElementById('displayName').value,
+    color: document.getElementById('displayColor').value,
+    bio: document.getElementById('displayBio').value,
+    links: links
+  };
+
+  const res = await fetch('/profile', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (data.ok) alert('Profile updated!');
+  else alert('Error: ' + (data.error || 'unknown'));
+}
+
+loadProfile();
+
+let deferredPrompt;
+const installBtn = document.getElementById("installBtn");
+
+// Hide button initially
+installBtn.style.display = "none";
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  // Stop Chrome from showing the default mini-infobar
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show your custom install button
+  installBtn.style.display = "inline-block";
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredPrompt) return;
+
+  // Show install prompt
+  deferredPrompt.prompt();
+
+  // Wait for user's response
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log(`User response to install: ${outcome}`);
+
+  // Hide the button after response
+  deferredPrompt = null;
+  installBtn.style.display = "none";
+});
+
+window.addEventListener("appinstalled", () => {
+  console.log("✅ App installed successfully!");
+  installBtn.style.display = "none";
+});
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/service-worker.js")
+      .then(reg => console.log("✅ Service Worker registered:", reg))
+      .catch(err => console.error("SW registration failed:", err));
+  });
+}
+const typingIndicator = document.getElementById('typingIndicator');
+const typingUsers = new Set();
+
+socket.on('user_typing', data => {
+  typingUsers.add(data.user);
+  updateTypingDisplay();
+});
+
+socket.on('user_stop_typing', data => {
+  typingUsers.delete(data.user);
+  updateTypingDisplay();
+});
+
+function updateTypingDisplay() {
+  if (typingUsers.size > 0) {
+    const names = Array.from(typingUsers).join(', ');
+    typingIndicator.innerText = `${names} typing...`;
+    typingIndicator.style.opacity = '1';
+  } else {
+    typingIndicator.style.opacity = '0';
+  }
+}
+</script>
+</body>
+</html>
