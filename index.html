@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AERO-V10 Project</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Audiowide&display=swap" rel="stylesheet">
+<style>
+  /* Base */
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Source Code Pro', monospace;background:#0a0a0a;overflow-x:hidden;scroll-behavior:smooth;color:#ddd;}
+  a{text-decoration:none;color:inherit;}
+  h2{margin-bottom:20px;color:#00f0ff;}
+
+  /* Abstract floating shapes */
+  .shape{
+    position:absolute;
+    border-radius:50%;
+    opacity:0.15;
+    animation:float 25s linear infinite;
+    mix-blend-mode:screen;
+  }
+  @keyframes float{
+    0%{transform:translateY(0);}
+    50%{transform:translateY(-50px);}
+    100%{transform:translateY(0);}
+  }
+
+  /* Header / Hero */
+  header{
+    text-align:center;
+    padding:100px 20px 80px;
+    position:relative;
+    overflow:hidden;
+  }
+  header h1{
+    font-family:'Audiowide',cursive;
+    font-size:4rem;
+    background:linear-gradient(45deg,#00f0ff,#ff00f0,#00ff88);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    animation:gradientShift 5s infinite alternate;
+  }
+  @keyframes gradientShift{
+    0%{background-position:0%;}
+    100%{background-position:100%;}
+  }
+  header p{
+    font-size:1.5rem;
+    color:#aaa;
+    margin-top:15px;
+  }
+  .hero-btn{
+    margin-top:30px;
+    padding:15px 30px;
+    font-family:'Audiowide',cursive;
+    font-size:1.2rem;
+    color:white;
+    background:linear-gradient(45deg,#00f0ff,#ff00f0);
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    transition:all 0.3s ease;
+  }
+  .hero-btn:hover{
+    transform:scale(1.05);
+    box-shadow:0 0 20px rgba(0,255,255,0.5);
+  }
+
+  /* Sections */
+  section{
+    padding:60px 20px;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:20px;
+    opacity:0;
+    transform:translateY(30px);
+    transition: all 0.8s ease;
+    position:relative;
+  }
+  section.visible{opacity:1;transform:translateY(0);}
+  .section-center{flex-direction:column;align-items:center;}
+
+  /* Feature Cards */
+  .feature-card{
+    backdrop-filter:blur(15px);
+    background: rgba(20, 20, 30, 0.6);
+    padding:25px;
+    border-radius:20px;
+    flex:1 1 250px;
+    max-width:300px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor:pointer;
+    color:white;
+  }
+  .feature-card:hover{
+    transform: rotateX(5deg) rotateY(5deg) scale(1.05);
+    box-shadow:0 0 25px rgba(0,255,255,0.4);
+  }
+  .feature-card h3{color:#FFECC8;margin-bottom:10px;}
+  .feature-card p{color:#FFEBB4;}
+
+  /* Terminal Card */
+  .terminal{
+    width:90%;
+    max-width:800px;
+    min-height:250px;
+    background: rgba(20, 20, 30, 0.6);
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 0 20px rgba(0,255,255,0.3);
+    font-family:'Source Code Pro', monospace;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    color:white;
+  }
+  .terminal div{margin-bottom:5px;}
+  .terminal input{
+    width:100%;
+    background:transparent;
+    border:none;
+    color:#fff;
+    font-size:1rem;
+    outline:none;
+  }
+
+  /* Carousel */
+  .carousel{
+    width:90%;
+    max-width:800px;
+    overflow:hidden;
+    border-radius:20px;
+    box-shadow:0 0 25px rgba(0,255,255,0.3);
+    margin-top:20px;
+    perspective:1000px;
+  }
+  .carousel-inner{
+    display:flex;
+    transition: transform 0.5s ease;
+  }
+  .carousel-inner img{
+    width:100%;
+    flex-shrink:0;
+    border-radius:20px;
+    transform:rotateY(0deg);
+  }
+  .carousel-btn{
+    margin-top:10px;
+    cursor:pointer;
+    font-family:'Audiowide',cursive;
+    color:#00f0ff;
+    border:none;
+    background:none;
+    font-size:1.2rem;
+  }
+
+  /* Download */
+  .download-btn{
+    display:inline-block;
+    margin-top:20px;
+    padding:15px 30px;
+    font-family:'Audiowide',cursive;
+    font-size:1.2rem;
+    color:#fff;
+    background:linear-gradient(45deg,#00f0ff,#ff00f0);
+    border:none;
+    border-radius:12px;
+    transition:all 0.3s ease;
+  }
+  .download-btn:hover{
+    transform:scale(1.05);
+    box-shadow:0 0 20px rgba(0,255,255,0.5);
+  }
+
+  /* About & How to Use */
+  .about-text, .usage-text{
+    max-width:800px;
+    text-align:center;
+    line-height:1.6;
+    color:#ccc;
+  }
+
+  /* Footer */
+  footer{
+    text-align:center;
+    padding:40px 20px;
+    color:#888;
+    font-size:0.9rem;
+    border-top:1px solid #222;
+  }
+
+  /* Responsive */
+  @media(max-width:768px){
+    header h1{font-size:3rem;}
+    .feature-card{max-width:90%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- Abstract Shapes -->
+<div class="shape" style="width:200px;height:200px;top:10%;left:5%;background:#00f0ff;"></div>
+<div class="shape" style="width:150px;height:150px;top:50%;left:70%;background:#ff00f0;"></div>
+<div class="shape" style="width:300px;height:300px;top:80%;left:30%;background:#00ff88;"></div>
+<div class="shape" style="width:300px;height:300px;top:90%;left:40%;background:cyan;"></div>
+
+<!-- Hero Section -->
+<header>
+  <h1>AERO-V10</h1>
+  <p>Next-gen chat & media experience in material design</p>
+  
+</header>
+
+<!-- About Section -->
+<section class="section-center">
+  <h2>About AERO-V10</h2>
+  <p class="about-text">
+    AERO-V10 is a terminal-style, material-inspired chat and media platform.
+    It allows multiple users to chat in real-time, stream music or radio, and use custom plugins for interactive experiences.
+    Fully compatible with Android (Termux/Pydroid) and Linux systems, it combines aesthetics with powerful functionality.
+  </p>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+  <div class="feature-card"><h3>Real-time Chat</h3><p>Communicate with multiple users seamlessly in a futuristic terminal interface.</p></div>
+  <div class="feature-card"><h3>Music Streaming</h3><p>Stream music & radio with dynamic queue, skip, and volume controls.</p></div>
+  <div class="feature-card"><h3>Custom Plugins</h3><p>Add commands & interactive tools to extend the system functionality.</p></div>
+  <div class="feature-card"><h3>Multi-platform</h3><p>Works on Android, Linux, and other terminals with full responsiveness.</p></div>
+  <div class="feature-card"><h3>Voice & Media Ready</h3><p>Support for voice chat and rich media integration in future updates.</p></div>
+</section>
+
+<!-- Terminal / How to Use Section -->
+
+
+<!-- Screenshots / Carousel Section -->
+<section class="carousel-section section-center">
+  <h2>Screenshots / Demo</h2>
+  <div class="carousel" id="carousel">
+    <div class="carousel-inner" id="carouselInner">
+      <img src="assetsR/Screenshot_20251105_191918.jpg">
+      <img src="assetsR/Screenshot_20251105_192007.jpg">
+      <img src="assetsR/Screenshot_20251105_192013.jpg">
+    </div>
+  </div>
+  <div>
+    <button class="carousel-btn" onclick="prevSlide()">⟨ Prev</button>
+    <button class="carousel-btn" onclick="nextSlide()">Next ⟩</button>
+  </div>
+</section>
+
+<!-- Download Section -->
+<section class="section-center">
+  <h2>Download AERO-V10</h2>
+  <a href="https://github.com/YOCRRZ224/AERO-V10" class="download-btn">Get the Project</a>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>&copy; 2025 YOCRRZ. AERO-V10 is open-source on GitHub. | <a href="https://github.com/YOCRRZ224/AERO-V10">GitHub</a></p>
+</footer>
+
+<script>
+  // Scroll animation
+  const sections=document.querySelectorAll('section');
+  function checkVisibility(){
+    const triggerBottom=window.innerHeight*0.85;
+    sections.forEach(sec=>{
+      const top=sec.getBoundingClientRect().top;
+      if(top<triggerBottom) sec.classList.add('visible');
+    });
+  }
+  window.addEventListener('scroll',checkVisibility);
+  window.addEventListener('load',checkVisibility);
+
+  // Terminal simulation
+  
+
+  // Carousel
+  let currentSlide=0;
+  const carouselInner=document.getElementById('carouselInner');
+  const totalSlides=carouselInner.children.length;
+  function showSlide(index){
+    if(index<0) index=totalSlides-1;
+    if(index>=totalSlides) index=0;
+    currentSlide=index;
+    carouselInner.style.transform=`translateX(-${index*100}%)`;
+  }
+  function prevSlide(){showSlide(currentSlide-1);}
+  function nextSlide(){showSlide(currentSlide+1);}
+</script>
+
+</body>
+  </html>
