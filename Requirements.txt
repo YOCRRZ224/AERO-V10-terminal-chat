@@ -1,0 +1,6 @@
+Flask
+Flask-SocketIO
+requests
+beautifulsoup4
+yt-dlp
+eventlet
