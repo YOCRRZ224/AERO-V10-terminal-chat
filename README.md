@@ -33,24 +33,13 @@ An advanced terminal chat designed for programmers, offering a unique chatting e
 *   **Avatars & Stickers:** Enhance your chat with personalized avatars and stickers.
 *   **PWA Support:** Installable as a Progressive Web App for a native-like experience.
 
-<p align="center">
-<img src="assetsR/Screenshot_20251105_192013.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
+  <summary><strong>AERO-V10 Screenshots</strong></summary>
+
+| Profile | Advance Login | Home |
+|--------|---------------|------|
+| <img src="assetsR/Screenshot_20251105_192013.jpg" alt="Profile" width="200"/> | <img src="assetsR/Screenshot_20251105_191918.jpg" alt="Login" width="200"/> | <img src="assetsR/Screenshot_20251105_192007.jpg" alt="Home" width="200"/> |
 
 
-<em>Profile Page</em>
-</p>
-<p align="center">
-<img src="assetsR/Screenshot_20251105_191918.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
-
-
-<em>Advance Login Page</em>
-</p>
-<p align="center">
-<img src="assetsR/Screenshot_20251105_192007.jpg" alt="AERO-V10 Terminal Chat Screenshot/Mockup" width="800"/>
-
-
-<em>Home</em>
-</p>
 ## 🛠️ Prerequisites & Dependencies
 
 Before you begin, ensure you have the following installed:
